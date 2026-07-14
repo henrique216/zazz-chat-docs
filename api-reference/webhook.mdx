@@ -1,0 +1,139 @@
+---
+title: "Configuração e assinatura"
+description: "Como configurar o webhook de eventos do canal e validar a assinatura HMAC das entregas"
+---
+
+Cada canal do Zazz Chat pode ter um **webhook de saída**: sempre que ocorre um evento assinado, o sistema faz um `POST` com o payload do evento na URL configurada, assinado com HMAC-SHA256.
+
+<Note>
+  A configuração do webhook é feita **exclusivamente pelo sistema** (interface web). Não há endpoint de API para criar ou alterar a configuração do webhook.
+</Note>
+
+## Configuração (pelo sistema)
+
+<Steps>
+  <Step title="Acesse a aba Webhook do canal">
+    No painel, vá em **Dashboard → Suporte → Canais**, escolha o canal, abra **Configurações** e selecione a aba **Webhook**.
+  </Step>
+  <Step title="Ative e informe a URL">
+    Habilite o webhook e informe a URL de destino (`http://` ou `https://`). Recomendado: HTTPS.
+  </Step>
+  <Step title="Selecione os eventos">
+    Marque quais eventos devem ser entregues (veja a lista abaixo).
+  </Step>
+  <Step title="Gere o secret">
+    Clique em **Gerar secret**. Ele é exibido **uma única vez** — guarde-o para validar a assinatura das entregas. Gerar um novo secret invalida o anterior.
+  </Step>
+  <Step title="Teste">
+    Use o botão de **teste** para disparar um ping imediato (`eventType: "webhook.test"`) e conferir o status HTTP e o tempo de resposta do seu endpoint.
+  </Step>
+</Steps>
+
+A mesma aba mostra o **histórico de entregas** (sucesso/falha, status HTTP, duração) e permite **reenviar** individualmente uma entrega que falhou.
+
+## Eventos
+
+Hoje existem dois eventos de negócio que geram entrega, mais o ping de teste:
+
+| Evento | Descrição |
+|--------|-----------|
+| [`message_received`](/api-reference/webhooks/mensagem-recebida) | Mensagem recebida de um contato no canal |
+| [`message_sent`](/api-reference/webhooks/mensagem-enviada) | Mensagem enviada pelo canal (agente, bot ou API) |
+| [`webhook.test`](/api-reference/webhooks/ping-de-teste) | Disparado manualmente pelo botão de teste na aba Webhook |
+
+<Note>
+  A interface permite marcar outros eventos na seleção (`chat_created`, `chat_closed`, `chat_transferred`, `chat_assigned`), mas eles ainda **não geram entregas** — não há disparo implementado para esses eventos no backend hoje. Marcá-los não tem efeito prático.
+</Note>
+
+<Note>
+  Configurações criadas antes da seleção de eventos existir (sem lista de eventos salva) recebem **todos** os eventos suportados, por compatibilidade.
+</Note>
+
+## Verificação de assinatura
+
+Toda entrega inclui dois headers:
+
+| Header | Conteúdo |
+|--------|----------|
+| `X-Webhook-Signature` | `sha256=<hex>` — HMAC-SHA256 do texto `"{timestamp}.{body}"` usando o secret do canal |
+| `X-Webhook-Timestamp` | Timestamp da assinatura em milissegundos (epoch) |
+
+Para validar: concatene o valor de `X-Webhook-Timestamp`, um ponto (`.`) e o **corpo bruto** da requisição, calcule o HMAC-SHA256 com o secret e compare com o valor após `sha256=`.
+
+<CodeGroup>
+
+```javascript Node.js (Express)
+const crypto = require("crypto");
+const express = require("express");
+
+const app = express();
+const SECRET = process.env.ZAZZ_WEBHOOK_SECRET;
+
+// Importante: use o corpo BRUTO (raw), não o objeto já parseado
+app.post("/webhook/zazz", express.raw({ type: "application/json" }), (req, res) => {
+  const signature = req.header("X-Webhook-Signature") || "";
+  const timestamp = req.header("X-Webhook-Timestamp") || "";
+
+  const expected =
+    "sha256=" +
+    crypto
+      .createHmac("sha256", SECRET)
+      .update(`${timestamp}.${req.body.toString("utf8")}`)
+      .digest("hex");
+
+  const valid =
+    signature.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+
+  if (!valid) return res.status(401).send("invalid signature");
+
+  const event = JSON.parse(req.body.toString("utf8"));
+  // ...processe o evento...
+
+  res.sendStatus(200);
+});
+```
+
+```python Python (Flask)
+import hashlib
+import hmac
+import os
+
+from flask import Flask, request
+
+app = Flask(__name__)
+SECRET = os.environ["ZAZZ_WEBHOOK_SECRET"].encode()
+
+@app.post("/webhook/zazz")
+def zazz_webhook():
+    signature = request.headers.get("X-Webhook-Signature", "")
+    timestamp = request.headers.get("X-Webhook-Timestamp", "")
+
+    payload = timestamp.encode() + b"." + request.get_data()
+    expected = "sha256=" + hmac.new(SECRET, payload, hashlib.sha256).hexdigest()
+
+    if not hmac.compare_digest(signature, expected):
+        return "invalid signature", 401
+
+    event = request.get_json()
+    # ...processe o evento...
+    return "", 200
+```
+
+</CodeGroup>
+
+<Tip>
+  Rejeite entregas com timestamp muito antigo (ex.: mais de 5 minutos) para se proteger contra replay de requisições capturadas.
+</Tip>
+
+## Entrega, timeout e retries
+
+- **Sucesso:** qualquer resposta `2xx`. Responda rápido (idealmente `200` imediato) e processe o evento de forma assíncrona.
+- **Timeout:** 10 segundos por tentativa.
+- **Retries automáticos:** até **5 tentativas** com backoff exponencial (2s, 4s, 8s, 16s entre as tentativas seguintes) para erros de rede, respostas `5xx` e `429`.
+- **Sem retry:** respostas `4xx` (exceto `429`) não são retentadas — normalmente indicam URL ou secret mal configurados no destino.
+- **Reenvio manual:** entregas com falha podem ser reenviadas pela aba Webhook do canal (histórico de entregas → reenviar).
+
+<Warning>
+  Como há retries, seu endpoint pode receber o **mesmo evento mais de uma vez**. Use `messageId` (ou a combinação `messageId` + `eventType`) para deduplicar. Se o webhook for desabilitado ou o secret removido entre o enfileiramento e a entrega, o evento é descartado silenciosamente.
+</Warning>

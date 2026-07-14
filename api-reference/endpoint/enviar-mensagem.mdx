@@ -1,0 +1,71 @@
+---
+title: "Enviar mensagem"
+openapi: "POST /channel-api/messages/send"
+---
+
+## Variáveis de template
+
+As variáveis (`template.variables`) são agrupadas por componente (`header`, `body`, `buttons`). Cada item aceita três formatos:
+
+| Formato | Exemplo | Quando usar |
+|---------|---------|-------------|
+| String posicional | `"R$ 500,00"` | Placeholders numerados (`{{1}}`, `{{2}}`...) na ordem |
+| Objeto com `key` | `{ "key": "valor_fatura", "value": "R$ 500,00" }` | Templates da Meta com variáveis nomeadas |
+| Objeto com `correlationId` | `{ "correlationId": 0, "value": "R$ 500,00" }` | Formato legado por posição |
+
+Um array simples no lugar do objeto (`"variables": ["R$ 500,00"]`) também é aceito e tratado como `body` (formato legado).
+
+## Botão order_details (Pix)
+
+`template.buttons` serve para botões especiais montados pelo backend — hoje apenas `order_details` (cobrança Pix via WhatsApp):
+
+```json
+{
+  "buttons": [
+    {
+      "index": 0,
+      "type": "order_details",
+      "orderDetails": {
+        "referenceId": "boleto-123456-20260402",
+        "type": "digital-goods",
+        "paymentType": "br",
+        "currency": "BRL",
+        "totalAmount": { "value": 50000, "offset": 100 },
+        "paymentSettings": [
+          {
+            "type": "pix_dynamic_code",
+            "pixDynamicCode": {
+              "code": "00020101021226700014br.gov.bcb.pix...",
+              "merchantName": "Zazz Internet",
+              "key": "39580525000189",
+              "keyType": "CNPJ"
+            }
+          }
+        ],
+        "order": {
+          "status": "pending",
+          "subtotal": { "value": 50000, "offset": 100 },
+          "items": [
+            {
+              "retailerId": "1234567",
+              "name": "Mensalidade",
+              "amount": { "value": 50000, "offset": 100 },
+              "quantity": 1
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+<Note>
+  Valores monetários usam o menor valor da moeda com `offset` decimal: `{ "value": 50000, "offset": 100 }` = R$ 500,00. O campo `value` também aceita string decimal de ERP (ex.: `"129,90"`), convertida automaticamente usando o `offset`. Placeholders **textuais** de botão continuam em `variables.buttons`.
+</Note>
+
+## Mídia
+
+<Warning>
+  Hoje o envio de mídia exige o conteúdo em `base64` (sem prefixo `data:`). O campo `mediaUrl` existe no schema, mas ainda não é aceito no processamento — requisições de mídia sem `base64` retornam `400 Base64 payload is required`.
+</Warning>

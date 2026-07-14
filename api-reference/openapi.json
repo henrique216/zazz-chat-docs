@@ -1,0 +1,740 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Zazz Chat — Channel API",
+    "description": "API por canal do Zazz Chat para envio de mensagens e webhook de eventos. A autenticação usa uma chave de API por canal, gerada na interface do sistema.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{host}",
+      "description": "Back-end do Zazz Chat",
+      "variables": {
+        "host": {
+          "default": "chat.zazzinternet.com",
+          "description": "Host do back-end da sua instalação do Zazz Chat"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "channelApiKey": []
+    }
+  ],
+  "paths": {
+    "/channel-api/messages/send": {
+      "post": {
+        "summary": "Enviar mensagem",
+        "description": "Enfileira o envio de uma mensagem de texto, template ou mídia pelo canal associado à chave de API. O envio é **assíncrono**: a resposta retorna imediatamente um `requestId` para correlação, e o processamento acontece em background. O status de cada envio pode ser acompanhado nos logs da aba **API** do canal.",
+        "operationId": "sendChannelMessage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              },
+              "examples": {
+                "texto": {
+                  "summary": "Mensagem de texto",
+                  "value": {
+                    "contact": { "value": "554396647639", "name": "Cliente" },
+                    "message": {
+                      "type": "text",
+                      "text": { "value": "Olá! Sua fatura foi gerada." }
+                    },
+                    "metadata": { "erpInvoiceId": "123456" }
+                  }
+                },
+                "template": {
+                  "summary": "Mensagem de template",
+                  "value": {
+                    "contact": { "value": "554396647639" },
+                    "message": {
+                      "type": "template",
+                      "template": {
+                        "name": "faturamento_do_boleto",
+                        "language": "pt_BR",
+                        "variables": {
+                          "header": [{ "value": "ABC123" }],
+                          "body": [
+                            { "key": "valor_fatura", "value": "R$ 500,00" },
+                            { "key": "vencimento", "value": "10/08/2026" }
+                          ]
+                        },
+                        "mediaHeader": {
+                          "format": "document",
+                          "link": "https://example.com/boleto.pdf",
+                          "filename": "boleto.pdf"
+                        }
+                      }
+                    }
+                  }
+                },
+                "midia": {
+                  "summary": "Mensagem de mídia",
+                  "value": {
+                    "contact": { "value": "554396647639" },
+                    "message": {
+                      "type": "media",
+                      "media": {
+                        "mimetype": "application/pdf",
+                        "filename": "boleto.pdf",
+                        "caption": "Segue o boleto.",
+                        "base64": "JVBERi0xLjQK...",
+                        "mediaType": "document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Mensagem enfileirada com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["requestId"],
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Identificador único da requisição, usado para correlação nos logs da aba API do canal.",
+                      "example": "3f2b4c1e-8a9d-4e2f-b1c3-9d8e7f6a5b4c"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição inválida: header `x-channel-api-key` ausente, corpo mal formado ou campo obrigatório do tipo de mensagem faltando (ex.: `template.name`, `media.base64`).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": {
+                  "statusCode": 400,
+                  "message": "Base64 payload is required",
+                  "error": "Bad Request"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Chave de API inválida ou API desabilitada no canal.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Invalid API token",
+                  "error": "Not Found"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "message_received": {
+      "post": {
+        "summary": "Mensagem recebida",
+        "description": "Disparado quando uma mensagem é **recebida** de um contato no canal. Enviado como `POST` para a URL configurada na aba Webhook do canal, com assinatura HMAC-SHA256 nos headers `X-Webhook-Signature` e `X-Webhook-Timestamp`.",
+        "operationId": "messageReceivedWebhook",
+        "parameters": [
+          { "$ref": "#/components/parameters/WebhookSignature" },
+          { "$ref": "#/components/parameters/WebhookTimestamp" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MessageEvent" },
+              "example": {
+                "eventType": "message.incoming",
+                "messageId": "wamid.HBgNNTU0Mzk2NjQ3NjM5...",
+                "chatId": "665f1c2b8a9d4e2fb1c39d8e",
+                "contactId": "664a0b1c2d3e4f5a6b7c8d9e",
+                "direction": "incoming",
+                "timestamp": "2026-07-14T12:34:56.789Z",
+                "engine": "whatsapp",
+                "origin": "contact",
+                "state": "received",
+                "content": { "type": "text", "text": "Olá, preciso de ajuda" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responda com qualquer status `2xx` para confirmar o recebimento. Timeout de 10s por tentativa; erros de rede, `5xx` e `429` são retentados até 5 vezes com backoff exponencial."
+          }
+        }
+      }
+    },
+    "message_sent": {
+      "post": {
+        "summary": "Mensagem enviada",
+        "description": "Disparado quando uma mensagem é **enviada** pelo canal (por agente, bot ou pela própria Channel API). Enviado como `POST` para a URL configurada na aba Webhook do canal, com assinatura HMAC-SHA256 nos headers `X-Webhook-Signature` e `X-Webhook-Timestamp`.",
+        "operationId": "messageSentWebhook",
+        "parameters": [
+          { "$ref": "#/components/parameters/WebhookSignature" },
+          { "$ref": "#/components/parameters/WebhookTimestamp" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MessageEvent" },
+              "example": {
+                "eventType": "message.outgoing",
+                "messageId": "wamid.HBgNNTU0Mzk2NjQ3NjM5...",
+                "chatId": "665f1c2b8a9d4e2fb1c39d8e",
+                "contactId": "664a0b1c2d3e4f5a6b7c8d9e",
+                "direction": "outgoing",
+                "timestamp": "2026-07-14T12:34:56.789Z",
+                "engine": "whatsapp",
+                "origin": "api",
+                "state": "sent",
+                "content": { "type": "text", "text": "Olá! Sua fatura foi gerada." }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responda com qualquer status `2xx` para confirmar o recebimento. Timeout de 10s por tentativa; erros de rede, `5xx` e `429` são retentados até 5 vezes com backoff exponencial."
+          }
+        }
+      }
+    },
+    "webhook_test": {
+      "post": {
+        "summary": "Ping de teste",
+        "description": "Disparado manualmente pelo botão de teste na aba Webhook do canal, para validar a URL e o secret configurados.",
+        "operationId": "webhookTestPing",
+        "parameters": [
+          { "$ref": "#/components/parameters/WebhookSignature" },
+          { "$ref": "#/components/parameters/WebhookTimestamp" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "eventType": {
+                    "type": "string",
+                    "const": "webhook.test",
+                    "description": "Sempre `webhook.test`."
+                  },
+                  "channelId": {
+                    "type": "string",
+                    "description": "ID do canal que disparou o teste."
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Data/hora do disparo em ISO 8601."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Texto fixo de identificação do ping."
+                  }
+                }
+              },
+              "example": {
+                "eventType": "webhook.test",
+                "channelId": "664a0b1c2d3e4f5a6b7c8d9e",
+                "timestamp": "2026-07-14T12:34:56.789Z",
+                "message": "Ping de teste do webhook do canal (Synkra)."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responda com qualquer status `2xx`. O status HTTP e o tempo de resposta são exibidos na interface."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "channelApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-channel-api-key",
+        "description": "Chave de API do canal, gerada na aba **API** das configurações do canal (Dashboard → Suporte → Canais). A chave é exibida uma única vez ao ser gerada; gerar uma nova invalida a anterior."
+      }
+    },
+    "parameters": {
+      "WebhookSignature": {
+        "name": "X-Webhook-Signature",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string" },
+        "description": "`sha256=<hex>` — HMAC-SHA256 do texto `\"{timestamp}.{body}\"` calculado com o secret do canal.",
+        "example": "sha256=5f3a1c9e8b..."
+      },
+      "WebhookTimestamp": {
+        "name": "X-Webhook-Timestamp",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string" },
+        "description": "Timestamp da assinatura em milissegundos (epoch). Usado na composição do texto assinado.",
+        "example": "1784465696789"
+      }
+    },
+    "schemas": {
+      "SendMessageRequest": {
+        "type": "object",
+        "required": ["contact", "message"],
+        "properties": {
+          "contact": { "$ref": "#/components/schemas/Contact" },
+          "message": { "$ref": "#/components/schemas/Message" },
+          "flowId": {
+            "type": "string",
+            "description": "Identificador opcional de fluxo para correlação externa.",
+            "example": "flow-123"
+          },
+          "closeConversation": {
+            "type": "boolean",
+            "default": false,
+            "description": "Se `true`, encerra a conversa aberta do contato nesse canal antes de enviar a nova mensagem."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Metadados livres de correlação externa (chave/valor em string). Ficam registrados no log da requisição.",
+            "example": { "erpInvoiceId": "123456" }
+          }
+        }
+      },
+      "Contact": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Identificador do destinatário. Para WhatsApp, o telefone com DDI e DDD.",
+            "example": "554396647639"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["phone", "email"],
+            "default": "phone",
+            "description": "Tipo do contato para normalização. Se omitido, assume `phone`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome amigável do destinatário. Usado apenas para contexto da requisição.",
+            "example": "Cliente"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": ["type"],
+        "description": "Mensagem a ser enviada. O objeto correspondente ao `type` escolhido (`text`, `template` ou `media`) é obrigatório.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text", "template", "media"],
+            "description": "Tipo da mensagem."
+          },
+          "text": { "$ref": "#/components/schemas/TextMessage" },
+          "template": { "$ref": "#/components/schemas/TemplateMessage" },
+          "media": { "$ref": "#/components/schemas/MediaMessage" }
+        }
+      },
+      "TextMessage": {
+        "type": "object",
+        "required": ["value"],
+        "description": "Payload da mensagem de texto. Obrigatório quando `message.type = \"text\"`.",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Texto da mensagem.",
+            "example": "Olá, mundo"
+          },
+          "pushName": {
+            "type": "string",
+            "description": "Push name opcional usado no contexto interno da mensagem.",
+            "example": "API"
+          }
+        }
+      },
+      "TemplateMessage": {
+        "type": "object",
+        "required": ["name"],
+        "description": "Payload da mensagem de template. Obrigatório quando `message.type = \"template\"`.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nome do template aprovado no provider.",
+            "example": "faturamento_do_boleto"
+          },
+          "language": {
+            "type": "string",
+            "default": "pt_BR",
+            "description": "Idioma do template. Se omitido, usa `pt_BR`."
+          },
+          "variables": { "$ref": "#/components/schemas/TemplateVariables" },
+          "mediaHeader": { "$ref": "#/components/schemas/TemplateMediaHeader" },
+          "buttons": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TemplateButton" },
+            "description": "Botões especiais montados pelo backend (hoje apenas `order_details`). Placeholders textuais de botão continuam em `variables.buttons`."
+          }
+        }
+      },
+      "TemplateVariables": {
+        "type": "object",
+        "description": "Variáveis do template agrupadas por componente. Um array simples no lugar deste objeto também é aceito e tratado como `body` (formato legado).",
+        "properties": {
+          "header": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TemplateVariableValue" },
+            "description": "Valores do header do template."
+          },
+          "body": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TemplateVariableValue" },
+            "description": "Valores do body do template."
+          },
+          "buttons": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TemplateVariableValue" },
+            "description": "Valores de placeholders textuais em botões do template. Não use este campo para `order_details`."
+          }
+        }
+      },
+      "TemplateVariableValue": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Forma curta posicional: apenas o valor do placeholder, na ordem."
+          },
+          {
+            "type": "object",
+            "required": ["value"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Nome da variável nomeada no template da Meta. Quando informado, o sistema envia `parameter_name` no parâmetro correspondente.",
+                "example": "valor_fatura"
+              },
+              "correlationId": {
+                "type": "number",
+                "description": "Posição legada do placeholder no componente. Usado quando `key` não é informado.",
+                "example": 0
+              },
+              "value": {
+                "type": "string",
+                "description": "Valor final enviado para o placeholder do template.",
+                "example": "R$ 500,00"
+              }
+            }
+          }
+        ]
+      },
+      "TemplateMediaHeader": {
+        "type": "object",
+        "required": ["format"],
+        "description": "Header de mídia do template, quando existir componente de mídia. Informe `link` (URL pública HTTPS) ou `fileId` (mídia já existente no provider).",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["image", "video", "document"],
+            "description": "Tipo do header de mídia."
+          },
+          "fileId": {
+            "type": "string",
+            "description": "ID já existente de mídia no provider, quando aplicável.",
+            "example": "1234567890"
+          },
+          "link": {
+            "type": "string",
+            "description": "URL pública HTTPS do arquivo a ser usado no header.",
+            "example": "https://example.com/boleto.pdf"
+          },
+          "filename": {
+            "type": "string",
+            "description": "Nome do arquivo enviado ao provider quando o formato for `document`.",
+            "example": "boleto.pdf"
+          }
+        }
+      },
+      "TemplateButton": {
+        "type": "object",
+        "required": ["index", "type", "orderDetails"],
+        "properties": {
+          "index": {
+            "type": "number",
+            "description": "Índice do botão dentro do template aprovado pela Meta.",
+            "example": 0
+          },
+          "type": {
+            "type": "string",
+            "enum": ["order_details"],
+            "description": "Tipo do botão especial montado pelo backend."
+          },
+          "orderDetails": { "$ref": "#/components/schemas/OrderDetails" }
+        }
+      },
+      "OrderDetails": {
+        "type": "object",
+        "required": ["referenceId", "type", "paymentType", "currency", "totalAmount", "paymentSettings", "order"],
+        "description": "Payload semântico do botão de `order_details` (ex.: cobrança Pix via WhatsApp).",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "Identificador único da cobrança/pedido no sistema emissor.",
+            "example": "boleto-123456-20260402"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo do pedido aceito pelo provider.",
+            "example": "digital-goods"
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Método/região de pagamento configurado no provider.",
+            "example": "br"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Moeda do pedido.",
+            "example": "BRL"
+          },
+          "totalAmount": { "$ref": "#/components/schemas/Amount" },
+          "paymentSettings": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PaymentSetting" },
+            "description": "Configurações de pagamento disponibilizadas para a cobrança."
+          },
+          "order": { "$ref": "#/components/schemas/OrderPayload" }
+        }
+      },
+      "Amount": {
+        "type": "object",
+        "required": ["value", "offset"],
+        "description": "Valor monetário no menor valor da moeda com offset decimal. `{ \"value\": 50000, \"offset\": 100 }` = R$ 500,00.",
+        "properties": {
+          "value": {
+            "oneOf": [{ "type": "integer" }, { "type": "string" }],
+            "description": "Valor no menor valor da moeda. Aceita inteiro já normalizado (ex.: `12990`) ou string decimal de ERP (ex.: `\"129,90\"`), convertida automaticamente usando o `offset`.",
+            "example": 50000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset decimal usado pelo provider. Ex.: `100` representa 2 casas decimais.",
+            "example": 100
+          }
+        }
+      },
+      "PaymentSetting": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["pix_dynamic_code"],
+            "description": "Tipo da configuração de pagamento."
+          },
+          "pixDynamicCode": { "$ref": "#/components/schemas/PixDynamicCode" }
+        }
+      },
+      "PixDynamicCode": {
+        "type": "object",
+        "required": ["code", "merchantName", "key", "keyType"],
+        "description": "Configuração do Pix dinâmico. Obrigatória quando `type = \"pix_dynamic_code\"`.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código Pix dinâmico completo retornado pelo PSP.",
+            "example": "00020101021226700014br.gov.bcb.pix2548pix.example.com..."
+          },
+          "merchantName": {
+            "type": "string",
+            "description": "Nome do recebedor exibido pelo provedor de pagamentos.",
+            "example": "Zazz Internet"
+          },
+          "key": {
+            "type": "string",
+            "description": "Chave Pix usada na cobrança.",
+            "example": "39580525000189"
+          },
+          "keyType": {
+            "type": "string",
+            "description": "Tipo da chave Pix.",
+            "example": "CNPJ"
+          }
+        }
+      },
+      "OrderPayload": {
+        "type": "object",
+        "required": ["status", "items", "subtotal"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Status atual do pedido enviado ao cliente.",
+            "example": "pending"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/OrderItem" },
+            "description": "Itens do pedido."
+          },
+          "subtotal": { "$ref": "#/components/schemas/Amount" },
+          "tax": { "$ref": "#/components/schemas/OrderTax" }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": ["retailerId", "name", "amount", "quantity"],
+        "properties": {
+          "retailerId": {
+            "type": "string",
+            "description": "ID estável do item no sistema do emissor.",
+            "example": "1234567"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome exibido do item.",
+            "example": "Mensalidade"
+          },
+          "amount": { "$ref": "#/components/schemas/Amount" },
+          "quantity": {
+            "type": "number",
+            "description": "Quantidade do item.",
+            "example": 1
+          }
+        }
+      },
+      "OrderTax": {
+        "type": "object",
+        "required": ["value", "offset"],
+        "description": "Dados de imposto do pedido.",
+        "properties": {
+          "value": {
+            "oneOf": [{ "type": "integer" }, { "type": "string" }],
+            "description": "Valor do imposto no menor valor da moeda."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset decimal usado pelo provider.",
+            "example": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição opcional do imposto."
+          }
+        }
+      },
+      "MediaMessage": {
+        "type": "object",
+        "required": ["mimetype", "base64"],
+        "description": "Payload da mensagem de mídia. Obrigatório quando `message.type = \"media\"`. Hoje o envio exige o conteúdo em `base64`; o campo `mediaUrl` existe no schema mas ainda não é aceito no processamento.",
+        "properties": {
+          "mimetype": {
+            "type": "string",
+            "description": "Mimetype da mídia enviada.",
+            "example": "application/pdf"
+          },
+          "base64": {
+            "type": "string",
+            "description": "Conteúdo do arquivo em base64, sem prefixo `data:`. Obrigatório."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Nome do arquivo.",
+            "example": "boleto.pdf"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Legenda da mídia, quando o provider suporta.",
+            "example": "Segue o boleto."
+          },
+          "mediaUrl": {
+            "type": "string",
+            "description": "Reservado. URL pública da mídia — ainda não aceito no processamento; envie `base64`."
+          },
+          "mediaType": {
+            "type": "string",
+            "description": "Tipo lógico usado ao persistir a mensagem.",
+            "example": "document"
+          }
+        }
+      },
+      "MessageEvent": {
+        "type": "object",
+        "required": ["eventType", "direction", "timestamp", "content"],
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "enum": ["message.incoming", "message.outgoing"],
+            "description": "`message.incoming` para o evento `message_received`; `message.outgoing` para `message_sent`."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "ID da mensagem (quando disponível, o ID do provider)."
+          },
+          "chatId": {
+            "type": "string",
+            "description": "ID do chat no Zazz Chat."
+          },
+          "contactId": {
+            "type": "string",
+            "description": "ID do contato no Zazz Chat."
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["incoming", "outgoing"],
+            "description": "Direção da mensagem."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data/hora da mensagem em ISO 8601."
+          },
+          "engine": {
+            "type": "string",
+            "description": "Provider/engine do canal (quando disponível).",
+            "example": "whatsapp"
+          },
+          "origin": {
+            "type": "string",
+            "description": "Origem da mensagem (quando disponível)."
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado da mensagem no momento do evento (quando disponível)."
+          },
+          "content": {
+            "description": "Conteúdo da mensagem. A estrutura varia conforme o tipo (texto, mídia, template etc.)."
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "statusCode": { "type": "integer" },
+          "message": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}

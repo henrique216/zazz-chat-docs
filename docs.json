@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Zazz Chat",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
@@ -11,27 +11,22 @@
   "navigation": {
     "pages": [
       {
-        "group": "Getting Started",
+        "group": "API Reference",
         "pages": [
-          "index",
-          "quickstart"
+          "api-reference/introduction",
+          "api-reference/endpoint/enviar-mensagem"
+        ]
+      },
+      {
+        "group": "Webhooks",
+        "pages": [
+          "api-reference/webhook",
+          "api-reference/webhooks/mensagem-recebida",
+          "api-reference/webhooks/mensagem-enviada",
+          "api-reference/webhooks/ping-de-teste"
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -40,15 +35,10 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Suporte",
+        "href": "mailto:henrique@zazzinternet.com"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
-    }
+    ]
   },
   "contextual": {
     "options": [
@@ -62,11 +52,5 @@
       "vscode"
     ]
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
-  }
+  "footer": {}
 }

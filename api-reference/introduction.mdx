@@ -1,0 +1,44 @@
+---
+title: "Introdução"
+description: "Visão geral da Channel API do Zazz Chat: autenticação, modelo assíncrono e logs"
+---
+
+A Channel API permite que sistemas externos (ERP, CRM, automações) enviem mensagens por um canal do Zazz Chat e recebam eventos via [webhook](/api-reference/webhook).
+
+```
+https://{host}/channel-api/...
+```
+
+Substitua `{host}` pelo host do back-end da sua instalação.
+
+## Autenticação
+
+Todas as requisições exigem o header `x-channel-api-key` com a chave de API do canal. A chave é **por canal** e é gerada dentro do sistema:
+
+<Steps>
+  <Step title="Acesse as configurações do canal">
+    No painel, vá em **Dashboard → Suporte → Canais**, escolha o canal e abra **Configurações**.
+  </Step>
+  <Step title="Abra a aba API">
+    Ative a API do canal e, se quiser, defina o nome da fila de atendimento usada pelos chats criados via API (padrão: `API`).
+  </Step>
+  <Step title="Gere a chave">
+    Clique em **Gerar chave**. A chave completa é exibida **uma única vez** — copie e guarde em local seguro. Depois disso, o sistema mostra apenas um preview. Gerar uma nova chave invalida a anterior.
+  </Step>
+</Steps>
+
+<Warning>
+  A API precisa estar **habilitada** na aba API do canal. Com a API desabilitada, qualquer requisição retorna `404 Invalid API token`, mesmo com a chave correta.
+</Warning>
+
+## Modelo assíncrono
+
+O envio de mensagens é **assíncrono**: a requisição enfileira a mensagem e retorna imediatamente um `requestId`. O processamento (criação/reabertura do chat, envio ao provider) acontece em background.
+
+- O chat criado ou reaberto pelo envio entra na fila configurada na aba API do canal (padrão `API`).
+- O status de cada envio (`queued`, sucesso ou falha, incluindo erros do provider) fica nos **logs da aba API** do canal, pesquisáveis pelo `requestId`.
+- Requisições que falharam podem ser reenviadas manualmente pelos logs.
+
+## Retry automático de templates
+
+Para mensagens de **template** que falham no provider com erros temporários de pareamento (códigos Meta `138002` e `138005`), o sistema reenfileira automaticamente o envio com atraso de 2 minutos, até 5 tentativas. Os retries aparecem no histórico do log com status `retry_auto`.
