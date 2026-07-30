@@ -25,6 +25,14 @@
           "api-reference/webhooks/mensagem-enviada",
           "api-reference/webhooks/ping-de-teste"
         ]
+      },
+      {
+        "group": "Socket (Tempo real)",
+        "pages": [
+          "api-reference/socket/introducao",
+          "api-reference/socket/eventos-cliente",
+          "api-reference/socket/eventos-servidor"
+        ]
       }
     ]
   },

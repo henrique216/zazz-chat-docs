@@ -1,0 +1,67 @@
+---
+title: "Eventos do servidor"
+description: "Eventos que o gateway emite para o seu cliente — mensagens, conversas e rascunhos em tempo real"
+---
+
+Estes são os eventos que o **gateway emite** (`socket.on(evento, handler)`). A coluna "Chega quando você" indica a [inscrição](/api-reference/socket/eventos-cliente) necessária — eventos marcados como **global** chegam a toda conexão, sem inscrição.
+
+<Warning>
+  Eventos **globais** não são filtrados pelo servidor — o seu cliente **deve** filtrar pelo próprio estado (ex.: ignorar um `conversation.close` de um chat que não está na sua lista). Nos demais, a entrega já é escopada pela sala, mas filtrar pelo `chatId`/`id` do payload continua sendo boa prática defensiva.
+</Warning>
+
+Sobre os payloads: `Chat` e `Message` são as entidades completas serializadas em JSON — os mesmos shapes retornados pela API REST (`GET /chat/get-chat/:id`, `GET /mensagens/get-messages/:id`). Campos novos podem ser adicionados a qualquer momento (mudança aditiva) — ignore o que não conhecer.
+
+## Mensagens
+
+| Evento | Payload | Chega quando você |
+|--------|---------|-------------------|
+| `message.upsert` | `Message` — mensagem nova ou atualizada (inclui as recebidas de fora, ex. WhatsApp) | emitiu `user_start_attendance` (ou spying) para o chat/contato |
+| `message.update` | `Message` — a mesma mensagem com estado novo (entregue / lida / falhou) | idem |
+| `notification:newMessage` | `Message` — mensagem recebida em chat atribuído a você | emitiu `user_logged_in` |
+
+## Conversas — ciclo de vida
+
+| Evento | Payload | Chega quando você |
+|--------|---------|-------------------|
+| `conversation.insert` | `Chat` — conversa recém-criada | **global** |
+| `conversation.update` | `Chat` — conversa após alteração | emitiu `user_start_watch_chats` com o id |
+| `conversation.activity` | `Chat` — nova atividade (última mensagem/contadores atualizados) | está na sala da equipe (fila de espera) ou é o atendente do chat (em atendimento) |
+| `conversation.close` | `Chat` — conversa encerrada | **global** |
+| `conversation.event` | Item de timeline: `{ _id, type, displayText?, at?, chatId, byUserId?, reason?, note?, metadata?, ... }` | emitiu `user_start_attendance` para o chat |
+
+Os `type` possíveis de `conversation.event`: `created`, `capture`, `assign`, `transfer`, `attendance_started`, `attendance_stopped`, `queue_enter`, `queue_exit`, `close`, `reopen`, `note`, `call_artifact`, `call_transcript`, `message_received`, `message_failed`.
+
+## Conversas — captura e transferência
+
+| Evento | Payload | Chega quando você |
+|--------|---------|-------------------|
+| `capturing.conversation` | `{ id: string }` | **global** — otimista: a captura foi *pedida*, ainda não concluiu |
+| `transferring.conversation` | `{ id: string }` | **global** — par otimista para transferência |
+| `captured.conversation-user` | `Chat` — já atribuído ao novo atendente | é o destinatário (`user_logged_in`) |
+| `transferred.conversation-user` | `Chat` | é o destinatário (`user_logged_in`) |
+| `transferred.conversation-team` | `Chat` | está na sala da equipe de destino (`user_join_team`) |
+| `removed.conversation-user` | `{ id, reason: 'capture' \| 'transfer', targetType: 'user' \| 'team', targetId? }` | o chat saiu de **você** — remova da sua fila pessoal |
+| `removed.conversation-team` | `{ id, reason, targetType, targetId? }` | o chat saiu da fila da **sua equipe** |
+
+## Atendimento iniciado/parado
+
+| Evento | Payload | Chega quando você |
+|--------|---------|-------------------|
+| `conversation.attendance.started` | `Chat` | observa o chat (`user_start_watch_chats`) ou é o atendente |
+| `conversation.attendance.stopped` | `Chat` | idem |
+
+## Rascunhos
+
+Rascunho é privado de quem o criou — estes eventos chegam **somente** ao dono (via `user_logged_in`), nunca a outros usuários. Substituem qualquer necessidade de polling da lista de rascunhos.
+
+| Evento | Payload | Nota |
+|--------|---------|------|
+| `conversation.draft.upsert` | `{ id, contactId, channelId, engine, normalized, displayValue, createdBy, expiresAt, createdAt?, updatedAt? }` | Rascunho criado ou atualizado |
+| `conversation.draft.removed` | `{ id: string, createdBy: string }` | Rascunho removido |
+
+## Contatos
+
+| Evento | Payload | Chega quando você |
+|--------|---------|-------------------|
+| `contact.updated` | `{ id, name?, profile? }` — nome/foto do contato mudou | **global** |
+| `contact.channel.insert` | `{ channelId, contact }` — contato novo no canal | emitiu `watch_channel_contacts` para o canal |

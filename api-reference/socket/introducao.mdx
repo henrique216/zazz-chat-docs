@@ -1,0 +1,84 @@
+---
+title: "Conexão e autenticação"
+description: "Como conectar ao gateway Socket.IO do Zazz Chat para receber eventos em tempo real"
+---
+
+Além da API REST, o Zazz Chat expõe um gateway **Socket.IO** para eventos em tempo real — mensagens novas, mudanças de fila, capturas e transferências chegam ao seu cliente sem polling. É a mesma superfície que o aplicativo de atendimento oficial usa: se você está construindo a própria interface de atendimento, este é o canal.
+
+<Note>
+  Socket.IO não é WebSocket puro — use um cliente Socket.IO (protocolo Engine.IO v4). Em JavaScript: [`socket.io-client`](https://socket.io/docs/v4/client-api/). Há clientes oficiais e da comunidade para Python, Java, Swift, Kotlin e outros.
+</Note>
+
+## Conexão
+
+O gateway roda em um endereço **separado** da API REST — não use a mesma URL base. Solicite o endereço do gateway do seu ambiente ao suporte.
+
+```javascript
+import { io } from "socket.io-client";
+
+const socket = io(SOCKET_URL, {
+  transports: ["websocket"],
+  auth: { token: SEU_JWT }, // o mesmo token do POST /auth/login
+});
+
+socket.on("connect", () => console.log("conectado", socket.id));
+socket.on("connect_error", (err) => console.error("falha na conexão:", err.message));
+```
+
+## Autenticação
+
+O handshake aceita o mesmo JWT retornado por [`POST /auth/login`](/api-reference/introduction), por três vias — em ordem de prioridade:
+
+1. Header `Authorization: Bearer <jwt>`
+2. `auth.token` no handshake (recomendado para browsers, como no exemplo acima)
+3. Cookie `access_token`
+
+<Warning>
+  Uma conexão **sem** token é aceita pelo gateway, mas fica sem identidade — eventos endereçados ao seu usuário (fila pessoal, notificações, rascunhos) **nunca chegam**. Sempre conecte com o token.
+</Warning>
+
+## Salas: como os eventos chegam até você
+
+O gateway não envia tudo para todo mundo. Depois de conectar, o cliente **entra em salas** emitindo eventos de inscrição (veja [Eventos do cliente](/api-reference/socket/eventos-cliente)) — e cada evento do servidor é entregue às salas relevantes. O fluxo típico de uma tela de atendimento:
+
+<Steps>
+  <Step title="Identifique a sessão">
+    Emita `user_logged_in` com o `userId` do usuário logado — habilita notificações, fila pessoal e eventos de rascunho.
+  </Step>
+  <Step title="Entre nas salas das equipes">
+    Emita `user_join_team` com os ids das equipes do atendente — habilita os eventos da fila de espera (conversa nova, transferência para a equipe).
+  </Step>
+  <Step title="Observe os chats visíveis">
+    Emita `user_start_watch_chats` com os ids dos chats renderizados na lista — habilita atualizações desses itens.
+  </Step>
+  <Step title="Ao abrir uma conversa">
+    Emita `user_start_attendance` com o `chatId` — habilita `message.upsert`/`message.update` daquela conversa.
+  </Step>
+</Steps>
+
+## Reconexão
+
+O servidor mantém uma janela de recuperação de sessão de **2 minutos** (salas e pacotes perdidos são restaurados em quedas curtas). Mesmo assim, **sempre re-emita os eventos de inscrição** (`user_logged_in`, `user_join_team`, `user_start_watch_chats`, `user_start_attendance`) no evento `connect` do cliente — a janela de recuperação vive em memória e não sobrevive a um restart do servidor.
+
+```javascript
+socket.on("connect", () => {
+  socket.emit("user_logged_in", userId);
+  socket.emit("user_join_team", teamIds);
+  socket.emit("user_start_watch_chats", visibleChatIds);
+  if (openChatId) socket.emit("user_start_attendance", openChatId);
+});
+```
+
+<Tip>
+  Após reconectar, recarregue o histórico da conversa aberta pela API REST — cobre mensagens que chegaram durante a queda, fora da janela de recuperação.
+</Tip>
+
+## Versionamento
+
+O vocabulário documentado nestas páginas faz parte do **contrato v1**:
+
+- **Mudança quebra-compatibilidade** (renomear evento, remover campo, mudar tipo) exige evento novo + descontinuação comunicada do antigo — nunca alteração in-place.
+- **Mudança aditiva** (campo novo opcional, evento novo) pode acontecer a qualquer momento — trate campos desconhecidos como ignoráveis.
+- Payloads novos carregam `schemaVersion` no envelope (mesmo padrão dos [webhooks](/api-reference/webhook)).
+
+Fora do contrato v1 (sujeitos a mudança sem aviso): vocabulário de vídeo-chamada (`call.*`, `whiteboard.*`) e salas internas de administração do sistema.

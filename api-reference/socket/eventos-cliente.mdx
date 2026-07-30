@@ -1,0 +1,61 @@
+---
+title: "Eventos do cliente"
+description: "Eventos que o seu cliente emite para o gateway — inscrições em salas"
+---
+
+Estes são os eventos que o **seu cliente emite** (`socket.emit(evento, payload)`). Quase todos são inscrições: entram (ou saem) de uma sala, e é a sala que determina quais [eventos do servidor](/api-reference/socket/eventos-servidor) você passa a receber.
+
+<Note>
+  Re-emita todas as inscrições ativas a cada `connect` — veja [Reconexão](/api-reference/socket/introducao#reconexao).
+</Note>
+
+## Sessão e fila
+
+| Evento | Payload | O que habilita |
+|--------|---------|----------------|
+| `user_logged_in` | `userId: string` | Notificações, fila pessoal ("em atendimento"), captura/transferência para você, eventos de rascunho |
+| `user_join_team` | `teams: string[]` | Fila de espera das equipes: conversa nova, transferência para a equipe, remoção da fila |
+| `user_leave_team` | `teams: string[]` | Sai das salas das equipes |
+
+## Lista de conversas
+
+| Evento | Payload | O que habilita |
+|--------|---------|----------------|
+| `user_start_watch_chats` | `chatIds: string[]` | Atualizações (`conversation.update`) dos chats visíveis na sua lista |
+| `user_stop_watch_chats` | `chatIds: string[]` | Para de observar os chats informados |
+
+<Tip>
+  Emita `user_start_watch_chats` com os ids da página visível e re-emita quando a lista mudar (paginação, filtro). Não é necessário sair das salas antigas antes de entrar nas novas — mas fazê-lo evita tráfego desnecessário.
+</Tip>
+
+## Conversa aberta
+
+| Evento | Payload | O que habilita |
+|--------|---------|----------------|
+| `user_start_attendance` | `chatId: string` | `message.upsert`, `message.update` e `conversation.event` da conversa aberta |
+| `user_stop_attendance` | `chatId: string` | Sai da sala da conversa (emitir ao fechar/trocar de conversa) |
+| `user_started_chat_spying` / `user_stopped_chat_spying` | `chatId: string` | Observação somente-leitura de uma conversa (mesmos eventos de mensagem, sem assumir o atendimento) |
+| `user_started_contact_spying` / `user_stopped_contact_spying` | `contactId: string` | Mensagens de **qualquer** conversa do contato informado |
+
+<Warning>
+  `user_started_contact_spying` entrega mensagens de todas as conversas do contato — se a sua tela mostra uma conversa só, filtre pelo `chatId` do payload antes de renderizar.
+</Warning>
+
+## Contatos e logs por canal
+
+| Evento | Payload | O que habilita |
+|--------|---------|----------------|
+| `watch_channel_contacts` / `unwatch_channel_contacts` | `channelId: string` | `contact.channel.insert` — contato novo aparecendo no canal |
+| `watch_channel_logs` / `unwatch_channel_logs` | `channelId: string` | Logs operacionais do canal |
+
+## Campanhas de envio em massa
+
+| Evento | Payload | O que habilita |
+|--------|---------|----------------|
+| `joinBroadcast` / `leaveBroadcast` | `broadcastId: string` | Progresso de um disparo em massa (`joinCampaign`/`leaveCampaign` são aliases legados, idênticos) |
+
+## Descontinuado
+
+| Evento | Payload | Situação |
+|--------|---------|----------|
+| `message.sent` | objeto de envio | **Descontinuado desde o v1.** Use [`POST /mensagens/send`](/api-reference/endpoint/enviar-mensagem) — o REST devolve status HTTP real (sucesso/erro), o emit era silencioso. O evento ainda funciona por compatibilidade, sem prazo de remoção definido, mas não deve ser usado em integrações novas. |
