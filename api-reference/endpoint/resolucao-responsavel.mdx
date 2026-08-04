@@ -1,0 +1,38 @@
+---
+title: Resolução do responsável do aparelho
+description: Como o Zazz Chat atribui sessões iniciadas no WhatsApp do aparelho.
+---
+
+# Resolução do responsável do aparelho
+
+Quando uma conversa é iniciada no aparelho, o Zazz Chat atribui a sessão a um responsável operacional. Essa atribuição organiza notas e métricas. Ela não comprova quem escreveu uma mensagem em um aparelho compartilhado.
+
+## Ordem de resolução
+
+Em canais operacionais, a ordem é:
+
+1. Responsável manual elegível.
+2. Responsável inferido elegível.
+3. Primeiro usuário elegível da allowlist do canal.
+
+Um responsável elegível está ativo e continua autorizado pelo canal. Sem candidato, o sistema persiste a mensagem e a auditoria, emite `OUTBOUND_OWNER_UNRESOLVED` e não cria uma sessão operacional nem envia a conversa para automação.
+
+## Canais de observação
+
+Um canal em modo Observação registra mensagens recebidas e ecos enviados pelo aparelho sem disparar automação. Ele exige um responsável manual elegível antes de ser salvo. A inferência e o fallback da allowlist não substituem essa escolha.
+
+Por padrão, um canal observado não fica disponível para novos envios pela plataforma. Habilitar essa disponibilidade não altera captura, responsável, encerramento automático ou métricas. Em um envio pela plataforma, o remetente real da mensagem permanece separado do responsável da sessão.
+
+## Inferência auditável
+
+O algoritmo atual é `owner-volume-v1`. Ele analisa chats fechados elegíveis do mesmo canal nos últimos 90 dias, ancorados em `closedAt`. São necessários pelo menos cinco chats elegíveis. Em caso de empate, não há candidato.
+
+A inferência registra origem, versão, janela e evidência resumida. Ela só é recalculada por comando em modo dry-run ou por ação administrativa explícita. Uma escolha manual tem precedência e bloqueia novo recálculo até ser removida.
+
+## Exemplo
+
+Se Ana é responsável manual, ela recebe a atribuição mesmo que Bruno apareça mais vezes no histórico. Sem escolha manual, o candidato inferido elegível é usado. Sem inferência válida, o primeiro usuário elegível da allowlist é usado.
+
+## Limites
+
+O provider informa que a mensagem veio do aparelho, mas não identifica com certeza a pessoa física que o utilizou. Por isso a interface mostra “responsável operacional presumido”, e não autoria comprovada.
