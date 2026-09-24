@@ -1,17 +1,153 @@
 ---
 title: "Listar conversas"
-openapi: "GET /channel-api/chats"
+api: "GET /channel-api/chats"
+description: "Lista as conversas abertas dos canais permitidos da API key"
+authMethod: "none"
 ---
 
-Exige uma [API key de conta](/api-reference/introduction#api-key-de-conta) com o scope `chats:read`.
+<ParamField header="Authorization" type="string" required>
+  API key de conta no formato `ApiKey <token>`. Scope exigido: `chats:read`. Veja [API key de conta](/api-reference/introduction#api-key-de-conta).
+</ParamField>
 
-## Canais visíveis
+<ParamField query="channelId" type="string">
+  Filtra por canal. Canal fora dos canais permitidos da key retorna `404`. Sem este filtro, a resposta traz todos os canais permitidos da key.
+</ParamField>
 
-- Sem `channelId`, a resposta traz os canais permitidos da key. Com **Todos os canais**, traz todos.
-- Com `channelId` fora dos canais permitidos, a resposta é `404`.
+<ParamField query="queue" type="string">
+  Filtra por fila: `Espera`, `Em Atendimento`, `Automação`, `API` ou a fila configurada no canal.
+</ParamField>
 
-## Paginação
+<ParamField query="teamId" type="string">
+  Filtra por equipe.
+</ParamField>
 
-`limit` vai até `100` (padrão `50`). Use `hasNextPage` e `nextPage` para seguir para a próxima página.
+<ParamField query="userId" type="string">
+  Filtra por atendente.
+</ParamField>
 
-A lista traz só conversas abertas. Conversas em canais de observação (fila `Observação`) não aparecem.
+<ParamField query="page" type="integer" default="1">
+  Página, a partir de `1`.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  Itens por página. Máximo `100`.
+</ParamField>
+
+## Resposta
+
+<ResponseField name="total" type="integer">
+  Total de conversas que atendem aos filtros.
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Página retornada.
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  Itens por página.
+</ResponseField>
+
+<ResponseField name="hasNextPage" type="boolean">
+  `true` quando existe próxima página.
+</ResponseField>
+
+<ResponseField name="nextPage" type="integer | null">
+  Número da próxima página, ou `null`.
+</ResponseField>
+
+<ResponseField name="chats" type="object[]">
+  Conversas abertas, da atualização mais recente para a mais antiga. A fila `Observação` não aparece.
+
+  <Expandable title="conversa">
+    <ResponseField name="id" type="string">
+      ID da conversa.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Sempre `open` nesta listagem.
+    </ResponseField>
+    <ResponseField name="queue" type="string">
+      Fila atual.
+    </ResponseField>
+    <ResponseField name="channelId" type="string | null">
+      Canal da conversa.
+    </ResponseField>
+    <ResponseField name="teamId" type="string | null">
+      Equipe da conversa.
+    </ResponseField>
+    <ResponseField name="userId" type="string | null">
+      Atendente atual. `null` quando ninguém está atendendo.
+    </ResponseField>
+    <ResponseField name="contact" type="object | null">
+      Contato da conversa: `id`, `name` e `value` (identificador no canal, ex.: telefone).
+    </ResponseField>
+    <ResponseField name="unreadMessages" type="integer">
+      Mensagens não lidas.
+    </ResponseField>
+    <ResponseField name="lastMessage" type="object | null">
+      Resumo da última mensagem: `origin` (ex.: `contact`, `agent`) e `content` (`type`, `value`).
+    </ResponseField>
+    <ResponseField name="createdAt" type="string">
+      Criação, ISO 8601.
+    </ResponseField>
+    <ResponseField name="updatedAt" type="string">
+      Última atualização, ISO 8601.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl "https://chat.zazzinternet.com/channel-api/chats?queue=Espera&limit=20" \
+  -H "Authorization: ApiKey zk_live_SEU_TOKEN"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "hasNextPage": false,
+  "nextPage": null,
+  "chats": [
+    {
+      "id": "66f2a1c9e4b0a1b2c3d4e5f6",
+      "status": "open",
+      "queue": "Espera",
+      "channelId": "66f1f0c2e4b0a1b2c3d4e001",
+      "teamId": "66f1f0c2e4b0a1b2c3d4e100",
+      "userId": null,
+      "contact": {
+        "id": "66f1f0c2e4b0a1b2c3d4e900",
+        "name": "Cliente",
+        "value": "554396647639"
+      },
+      "unreadMessages": 2,
+      "lastMessage": { "origin": "contact", "content": { "type": "text", "value": "Olá" } },
+      "createdAt": "2026-09-24T12:00:00.000Z",
+      "updatedAt": "2026-09-24T12:05:00.000Z"
+    }
+  ]
+}
+```
+
+```json 400
+{
+  "statusCode": 400,
+  "message": ["limit must not be greater than 100"],
+  "error": "Bad Request"
+}
+```
+
+```json 404
+{
+  "statusCode": 404,
+  "message": "Not Found"
+}
+```
+
+</ResponseExample>

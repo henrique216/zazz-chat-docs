@@ -8,6 +8,11 @@
     "dark": "#15803D"
   },
   "favicon": "/favicon.svg",
+  "api": {
+    "mdx": {
+      "server": "https://chat.zazzinternet.com"
+    }
+  },
   "navigation": {
     "pages": [
       {

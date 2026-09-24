@@ -1,12 +1,79 @@
 ---
 title: "Listar usuários"
-openapi: "GET /channel-api/users"
+api: "GET /channel-api/users"
+description: "Lista os usuários, para transferir ou capturar conversas"
+authMethod: "none"
 ---
 
-Exige uma [API key de conta](/api-reference/introduction#api-key-de-conta) com o scope `users:read`.
-
-Usuários cancelados não aparecem. Use o `id` do usuário como `userId` em [Transferir conversa](/api-reference/endpoint/transferir-conversa) ou [Capturar atendimento](/api-reference/endpoint/capturar-atendimento).
+<ParamField header="Authorization" type="string" required>
+  API key de conta no formato `ApiKey <token>`. Scope exigido: `users:read`. Veja [API key de conta](/api-reference/introduction#api-key-de-conta).
+</ParamField>
 
 <Note>
-  A resposta inclui nome e e-mail dos usuários. Libere `users:read` só para integrações que precisam desses dados.
+  A resposta inclui nome e e-mail. Libere `users:read` só para integrações que precisam desses dados.
 </Note>
+
+## Resposta
+
+Array de usuários ativos e em onboarding. Usuários cancelados não aparecem. Use o `id` como `userId` em [Transferir conversa](/api-reference/endpoint/transferir-conversa) ou [Capturar atendimento](/api-reference/endpoint/capturar-atendimento).
+
+<ResponseField name="id" type="string">
+  ID do usuário.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nome do usuário.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  E-mail do usuário.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `active` ou `onboarding`.
+</ResponseField>
+
+<ResponseField name="role" type="object | null">
+  Perfil do usuário.
+
+  <Expandable title="role">
+    <ResponseField name="id" type="string | null">
+      ID do perfil.
+    </ResponseField>
+    <ResponseField name="name" type="string | null">
+      Nome do perfil.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl "https://chat.zazzinternet.com/channel-api/users" \
+  -H "Authorization: ApiKey zk_live_SEU_TOKEN"
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+[
+  {
+    "id": "66f1f0c2e4b0a1b2c3d4e200",
+    "name": "Ana Souza",
+    "email": "ana@empresa.com",
+    "status": "active",
+    "role": { "id": "66f1f0c2e4b0a1b2c3d4e300", "name": "Atendente" }
+  }
+]
+```
+
+```json 404
+{
+  "statusCode": 404,
+  "message": "Not Found"
+}
+```
+
+</ResponseExample>
