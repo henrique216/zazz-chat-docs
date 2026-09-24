@@ -27,7 +27,7 @@ socket.on("connect_error", (err) => console.error("falha na conexão:", err.mess
 
 ## Autenticação
 
-O handshake aceita o mesmo JWT retornado por [`POST /auth/login`](/api-reference/introduction), por três vias — em ordem de prioridade:
+O handshake aceita o mesmo JWT retornado por [`POST /auth/login`](/guias/introducao), por três vias — em ordem de prioridade:
 
 1. Header `Authorization: Bearer <jwt>`
 2. `auth.token` no handshake (recomendado para browsers, como no exemplo acima)
@@ -79,6 +79,6 @@ O vocabulário documentado nestas páginas faz parte do **contrato v1**:
 
 - **Mudança quebra-compatibilidade** (renomear evento, remover campo, mudar tipo) exige evento novo + descontinuação comunicada do antigo — nunca alteração in-place.
 - **Mudança aditiva** (campo novo opcional, evento novo) pode acontecer a qualquer momento — trate campos desconhecidos como ignoráveis.
-- Payloads novos carregam `schemaVersion` no envelope (mesmo padrão dos [webhooks](/api-reference/webhook)).
+- Payloads novos carregam `schemaVersion` no envelope (mesmo padrão dos [webhooks](/guias/webhooks)).
 
 Fora do contrato v1 (sujeitos a mudança sem aviso): vocabulário de vídeo-chamada (`call.*`, `whiteboard.*`) e salas internas de administração do sistema.

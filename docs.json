@@ -14,49 +14,67 @@
     }
   },
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "API Reference",
-        "pages": [
-          "api-reference/introduction",
-          "api-reference/endpoint/enviar-mensagem",
-          "api-reference/endpoint/resolucao-responsavel"
+        "tab": "Guias",
+        "groups": [
+          {
+            "group": "Começando",
+            "pages": ["guias/introducao"]
+          },
+          {
+            "group": "Integração",
+            "pages": ["guias/webhooks", "guias/socket"]
+          }
         ]
       },
       {
-        "group": "Conversas",
-        "pages": [
-          "api-reference/endpoint/listar-conversas",
-          "api-reference/endpoint/transferir-conversa",
-          "api-reference/endpoint/capturar-atendimento"
-        ]
-      },
-      {
-        "group": "Equipes e usuários",
-        "pages": [
-          "api-reference/endpoint/listar-equipes",
-          "api-reference/endpoint/listar-usuarios"
-        ]
-      },
-      {
-        "group": "Webhooks",
-        "pages": [
-          "api-reference/webhook",
-          "api-reference/webhooks/mensagem-recebida",
-          "api-reference/webhooks/mensagem-enviada",
-          "api-reference/webhooks/ping-de-teste"
-        ]
-      },
-      {
-        "group": "Socket (Tempo real)",
-        "pages": [
-          "api-reference/socket/introducao",
-          "api-reference/socket/eventos-cliente",
-          "api-reference/socket/eventos-servidor"
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Mensagens",
+            "pages": ["api-reference/endpoint/enviar-mensagem"]
+          },
+          {
+            "group": "Conversas",
+            "pages": [
+              "api-reference/endpoint/listar-conversas",
+              "api-reference/endpoint/transferir-conversa",
+              "api-reference/endpoint/capturar-atendimento"
+            ]
+          },
+          {
+            "group": "Equipes e usuários",
+            "pages": [
+              "api-reference/endpoint/listar-equipes",
+              "api-reference/endpoint/listar-usuarios"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/mensagem-recebida",
+              "api-reference/webhooks/mensagem-enviada",
+              "api-reference/webhooks/ping-de-teste"
+            ]
+          },
+          {
+            "group": "Socket (Tempo real)",
+            "pages": [
+              "api-reference/socket/eventos-cliente",
+              "api-reference/socket/eventos-servidor"
+            ]
+          }
         ]
       }
     ]
   },
+  "redirects": [
+    { "source": "/api-reference/introduction", "destination": "/guias/introducao" },
+    { "source": "/api-reference/webhook", "destination": "/guias/webhooks" },
+    { "source": "/api-reference/socket/introducao", "destination": "/guias/socket" },
+    { "source": "/api-reference/endpoint/resolucao-responsavel", "destination": "/guias/introducao" }
+  ],
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
