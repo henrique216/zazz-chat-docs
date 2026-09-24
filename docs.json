@@ -8,11 +8,6 @@
     "dark": "#15803D"
   },
   "favicon": "/favicon.svg",
-  "api": {
-    "mdx": {
-      "server": "https://chat.zazzinternet.com"
-    }
-  },
   "navigation": {
     "tabs": [
       {
@@ -30,6 +25,7 @@
       },
       {
         "tab": "API Reference",
+        "openapi": "api-reference/openapi.json",
         "groups": [
           {
             "group": "Mensagens",
@@ -39,7 +35,8 @@
             "group": "Conversas",
             "pages": [
               "api-reference/endpoint/listar-conversas",
-              "api-reference/endpoint/transferir-conversa",
+              "api-reference/endpoint/transferir-para-equipe",
+              "api-reference/endpoint/transferir-para-usuario",
               "api-reference/endpoint/capturar-atendimento"
             ]
           },
@@ -73,7 +70,8 @@
     { "source": "/api-reference/introduction", "destination": "/guias/introducao" },
     { "source": "/api-reference/webhook", "destination": "/guias/webhooks" },
     { "source": "/api-reference/socket/introducao", "destination": "/guias/socket" },
-    { "source": "/api-reference/endpoint/resolucao-responsavel", "destination": "/guias/introducao" }
+    { "source": "/api-reference/endpoint/resolucao-responsavel", "destination": "/guias/introducao" },
+    { "source": "/api-reference/endpoint/transferir-conversa", "destination": "/api-reference/endpoint/transferir-para-equipe" }
   ],
   "logo": {
     "light": "/logo/light.svg",

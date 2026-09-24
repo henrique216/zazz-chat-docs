@@ -279,10 +279,10 @@
         }
       }
     },
-    "/channel-api/chats/{id}/transfer": {
+    "/channel-api/chats/{id}/transfer/team": {
       "post": {
-        "summary": "Transferir conversa",
-        "description": "Transfere a conversa para uma equipe (`teamId`) ou para um usuário (`userId`). Diferente da captura, funciona com a conversa já em atendimento. Scope: `chats:transfer`.",
+        "summary": "Transferir para equipe",
+        "description": "Transfere a conversa para uma equipe. Ela vai para a fila `Espera` da equipe, sem atendente — inclusive se alguém estava atendendo. Scope: `chats:transfer`.",
         "security": [
           {
             "accountApiKey": []
@@ -306,23 +306,12 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TransferChatRequest"
+                "$ref": "#/components/schemas/TransferChatToTeamRequest"
               },
-              "examples": {
-                "equipe": {
-                  "summary": "Para uma equipe",
-                  "value": {
-                    "teamId": "66f1f0c2e4b0a1b2c3d4e100",
-                    "reasonCode": "ERP_ROUTING",
-                    "reason": "Cliente com fatura em atraso"
-                  }
-                },
-                "usuario": {
-                  "summary": "Para um usuário",
-                  "value": {
-                    "userId": "66f1f0c2e4b0a1b2c3d4e200"
-                  }
-                }
+              "example": {
+                "teamId": "66f1f0c2e4b0a1b2c3d4e100",
+                "reasonCode": "ERP_ROUTING",
+                "reason": "Cliente com fatura em atraso"
               }
             }
           }
@@ -339,7 +328,7 @@
             }
           },
           "400": {
-            "description": "Nenhum ou os dois destinos informados, equipe/usuário inexistente, usuário cancelado ou conversa encerrada.",
+            "description": "`teamId` ausente, equipe inexistente ou conversa encerrada.",
             "content": {
               "application/json": {
                 "schema": {
@@ -347,7 +336,115 @@
                 },
                 "example": {
                   "statusCode": 400,
-                  "message": "Informe exatamente um destino: teamId ou userId",
+                  "message": "Equipe não encontrada",
+                  "error": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nenhuma credencial válida (API key revogada, inexistente ou header ausente).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Credencial ausente ou inválida",
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credencial ausente/inválida para esta rota, key sem o scope exigido, chat inexistente ou fora dos canais permitidos da key. A API não diferencia os casos para não revelar a existência do recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Not Found",
+                  "error": "Not Found"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de 120 requisições por minuto por API key excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Rate limit exceeded. Maximum 120 requests per 60s per API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/channel-api/chats/{id}/transfer/user": {
+      "post": {
+        "summary": "Transferir para usuário",
+        "description": "Transfere a conversa para um usuário. Ela fica `Em Atendimento` com ele, mesmo que outro atendente já estivesse atendendo. Para só pegar da fila, use **Capturar atendimento**. Scope: `chats:transfer`.",
+        "security": [
+          {
+            "accountApiKey": []
+          }
+        ],
+        "x-scope": "chats:transfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID do chat (ObjectId).",
+            "schema": {
+              "type": "string",
+              "example": "66f2a1c9e4b0a1b2c3d4e5f6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferChatToUserRequest"
+              },
+              "example": {
+                "userId": "66f1f0c2e4b0a1b2c3d4e200"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversa após a transferência.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`userId` ausente, usuário inexistente ou cancelado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": "Usuário não encontrado",
                   "error": "Bad Request"
                 }
               }
@@ -418,7 +515,7 @@
     "/channel-api/chats/{id}/capture": {
       "post": {
         "summary": "Capturar atendimento",
-        "description": "Um usuário assume a conversa que está na fila. Recusada se a conversa já está `Em Atendimento` — para tirar de um atendente e passar a outro, use **Transferir conversa**. Scope: `chats:capture`.",
+        "description": "Um usuário assume a conversa que está na fila. Recusada se a conversa já está `Em Atendimento` — para tirar de um atendente e passar a outro, use **Transferir para usuário**. Scope: `chats:capture`.",
         "security": [
           {
             "accountApiKey": []
@@ -960,17 +1057,37 @@
           }
         }
       },
-      "TransferChatRequest": {
+      "TransferChatToTeamRequest": {
         "type": "object",
-        "description": "Informe exatamente um destino: `teamId` ou `userId`.",
+        "required": [
+          "teamId"
+        ],
         "properties": {
           "teamId": {
             "type": "string",
-            "description": "Equipe de destino. O chat volta para a fila `Espera` da equipe, sem atendente."
+            "description": "Equipe de destino (veja Listar equipes)."
           },
+          "reasonCode": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Código do motivo, registrado no evento de transferência."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Motivo em texto livre."
+          }
+        }
+      },
+      "TransferChatToUserRequest": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
           "userId": {
             "type": "string",
-            "description": "Usuário de destino. O chat fica `Em Atendimento` com esse usuário, mesmo que outro já estivesse atendendo."
+            "description": "Usuário de destino (veja Listar usuários)."
           },
           "reasonCode": {
             "type": "string",

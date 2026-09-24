@@ -18,7 +18,7 @@ A API usa duas credenciais. Cada rota aceita uma delas:
 | Credencial | Header | Rotas |
 |------------|--------|-------|
 | Chave de API do canal | `x-channel-api-key: <chave>` | [Enviar mensagem](/api-reference/endpoint/enviar-mensagem) |
-| API key de conta | `Authorization: ApiKey <token>` | [Listar conversas](/api-reference/endpoint/listar-conversas), [Transferir conversa](/api-reference/endpoint/transferir-conversa), [Capturar atendimento](/api-reference/endpoint/capturar-atendimento), [Listar equipes](/api-reference/endpoint/listar-equipes), [Listar usuários](/api-reference/endpoint/listar-usuarios) |
+| API key de conta | `Authorization: ApiKey <token>` | [Listar conversas](/api-reference/endpoint/listar-conversas), [Transferir para equipe](/api-reference/endpoint/transferir-para-equipe), [Transferir para usuário](/api-reference/endpoint/transferir-para-usuario), [Capturar atendimento](/api-reference/endpoint/capturar-atendimento), [Listar equipes](/api-reference/endpoint/listar-equipes), [Listar usuários](/api-reference/endpoint/listar-usuarios) |
 
 ### API key de conta
 
@@ -39,7 +39,7 @@ A API key de conta pertence à conta, não a um canal. Ela define quais canais p
 | Scope | Libera |
 |-------|--------|
 | `chats:read` | Listar conversas |
-| `chats:transfer` | Transferir conversa para equipe ou usuário |
+| `chats:transfer` | Transferir para equipe e transferir para usuário |
 | `chats:capture` | Capturar atendimento para um usuário |
 | `teams:read` | Listar equipes |
 | `users:read` | Listar usuários |
