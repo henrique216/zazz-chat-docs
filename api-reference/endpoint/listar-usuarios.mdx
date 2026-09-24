@@ -1,0 +1,12 @@
+---
+title: "Listar usuários"
+openapi: "GET /channel-api/users"
+---
+
+Exige uma [API key de conta](/api-reference/introduction#api-key-de-conta) com o scope `users:read`.
+
+Usuários cancelados não aparecem. Use o `id` do usuário como `userId` em [Transferir conversa](/api-reference/endpoint/transferir-conversa) ou [Capturar atendimento](/api-reference/endpoint/capturar-atendimento).
+
+<Note>
+  A resposta inclui nome e e-mail dos usuários. Libere `users:read` só para integrações que precisam desses dados.
+</Note>

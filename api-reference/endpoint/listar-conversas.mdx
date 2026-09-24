@@ -1,0 +1,17 @@
+---
+title: "Listar conversas"
+openapi: "GET /channel-api/chats"
+---
+
+Exige uma [API key de conta](/api-reference/introduction#api-key-de-conta) com o scope `chats:read`.
+
+## Canais visíveis
+
+- Sem `channelId`, a resposta traz os canais permitidos da key. Com **Todos os canais**, traz todos.
+- Com `channelId` fora dos canais permitidos, a resposta é `404`.
+
+## Paginação
+
+`limit` vai até `100` (padrão `50`). Use `hasNextPage` e `nextPage` para seguir para a próxima página.
+
+A lista traz só conversas abertas. Conversas em canais de observação (fila `Observação`) não aparecem.

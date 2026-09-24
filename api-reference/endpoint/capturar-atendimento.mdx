@@ -1,0 +1,14 @@
+---
+title: "Capturar atendimento"
+openapi: "POST /channel-api/chats/{id}/capture"
+---
+
+Exige uma [API key de conta](/api-reference/introduction#api-key-de-conta) com o scope `chats:capture`.
+
+O usuário informado em `userId` assume a conversa, que passa para `Em Atendimento`.
+
+<Warning>
+  A captura é recusada com `400` se a conversa já está `Em Atendimento`. Ela nunca tira a conversa de outro atendente. Para reatribuir, use [Transferir conversa](/api-reference/endpoint/transferir-conversa).
+</Warning>
+
+Se duas capturas chegam ao mesmo tempo, só a primeira vale. A segunda recebe `409`.

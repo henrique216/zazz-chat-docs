@@ -19,6 +19,21 @@
         ]
       },
       {
+        "group": "Conversas",
+        "pages": [
+          "api-reference/endpoint/listar-conversas",
+          "api-reference/endpoint/transferir-conversa",
+          "api-reference/endpoint/capturar-atendimento"
+        ]
+      },
+      {
+        "group": "Equipes e usuários",
+        "pages": [
+          "api-reference/endpoint/listar-equipes",
+          "api-reference/endpoint/listar-usuarios"
+        ]
+      },
+      {
         "group": "Webhooks",
         "pages": [
           "api-reference/webhook",

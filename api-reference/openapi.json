@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Zazz Chat — Channel API",
-    "description": "API por canal do Zazz Chat para envio de mensagens e webhook de eventos. A autenticação usa uma chave de API por canal, gerada na interface do sistema.",
+    "description": "Channel API do Zazz Chat: envio de mensagens, roteamento de conversas e webhook de eventos. Há duas credenciais: a chave de API do canal (header `x-channel-api-key`) e a API key de conta (header `Authorization: ApiKey <token>`), com scopes e canais permitidos.",
     "version": "1.0.0"
   },
   "servers": [
@@ -140,6 +140,545 @@
           }
         }
       }
+    },
+    "/channel-api/chats": {
+      "get": {
+        "summary": "Listar conversas",
+        "description": "Lista as conversas abertas (fila `Observação` fica de fora), da mais recente para a mais antiga. Sem `channelId`, uma key com canais selecionados só vê esses canais. Scope: `chats:read`.",
+        "security": [
+          {
+            "accountApiKey": []
+          }
+        ],
+        "x-scope": "chats:read",
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtra por canal. Canal fora dos permitidos da key retorna `404`."
+          },
+          {
+            "name": "queue",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtra por fila (ex.: `Espera`, `Em Atendimento`, `Automação`, `API`)."
+          },
+          {
+            "name": "teamId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtra por equipe."
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtra por atendente."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de conversas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parâmetro inválido (ex.: `limit` acima de 100).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": [
+                    "limit must not be greater than 100"
+                  ],
+                  "error": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nenhuma credencial válida (API key revogada, inexistente ou header ausente).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Credencial ausente ou inválida",
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credencial ausente/inválida para esta rota, key sem o scope exigido, chat inexistente ou fora dos canais permitidos da key. A API não diferencia os casos para não revelar a existência do recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Not Found",
+                  "error": "Not Found"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de 120 requisições por minuto por API key excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Rate limit exceeded. Maximum 120 requests per 60s per API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/channel-api/chats/{id}/transfer": {
+      "post": {
+        "summary": "Transferir conversa",
+        "description": "Transfere a conversa para uma equipe (`teamId`) ou para um usuário (`userId`). Diferente da captura, funciona com a conversa já em atendimento. Scope: `chats:transfer`.",
+        "security": [
+          {
+            "accountApiKey": []
+          }
+        ],
+        "x-scope": "chats:transfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID do chat (ObjectId).",
+            "schema": {
+              "type": "string",
+              "example": "66f2a1c9e4b0a1b2c3d4e5f6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferChatRequest"
+              },
+              "examples": {
+                "equipe": {
+                  "summary": "Para uma equipe",
+                  "value": {
+                    "teamId": "66f1f0c2e4b0a1b2c3d4e100",
+                    "reasonCode": "ERP_ROUTING",
+                    "reason": "Cliente com fatura em atraso"
+                  }
+                },
+                "usuario": {
+                  "summary": "Para um usuário",
+                  "value": {
+                    "userId": "66f1f0c2e4b0a1b2c3d4e200"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversa após a transferência.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Nenhum ou os dois destinos informados, equipe/usuário inexistente, usuário cancelado ou conversa encerrada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": "Informe exatamente um destino: teamId ou userId",
+                  "error": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nenhuma credencial válida (API key revogada, inexistente ou header ausente).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Credencial ausente ou inválida",
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credencial ausente/inválida para esta rota, key sem o scope exigido, chat inexistente ou fora dos canais permitidos da key. A API não diferencia os casos para não revelar a existência do recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Not Found",
+                  "error": "Not Found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "O chat está sendo processado por outra operação neste momento. Tente de novo em alguns segundos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 409,
+                  "message": "O chat ja esta sendo processado.",
+                  "error": "Conflict"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de 120 requisições por minuto por API key excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Rate limit exceeded. Maximum 120 requests per 60s per API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/channel-api/chats/{id}/capture": {
+      "post": {
+        "summary": "Capturar atendimento",
+        "description": "Um usuário assume a conversa que está na fila. Recusada se a conversa já está `Em Atendimento` — para tirar de um atendente e passar a outro, use **Transferir conversa**. Scope: `chats:capture`.",
+        "security": [
+          {
+            "accountApiKey": []
+          }
+        ],
+        "x-scope": "chats:capture",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID do chat (ObjectId).",
+            "schema": {
+              "type": "string",
+              "example": "66f2a1c9e4b0a1b2c3d4e5f6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureChatRequest"
+              },
+              "example": {
+                "userId": "66f1f0c2e4b0a1b2c3d4e200"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversa após a captura.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Usuário inexistente/cancelado ou conversa já em atendimento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 400,
+                  "message": "Chat ja esta em atendimento e nao pode ser capturado novamente",
+                  "error": "Bad Request"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nenhuma credencial válida (API key revogada, inexistente ou header ausente).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Credencial ausente ou inválida",
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credencial ausente/inválida para esta rota, key sem o scope exigido, chat inexistente ou fora dos canais permitidos da key. A API não diferencia os casos para não revelar a existência do recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Not Found",
+                  "error": "Not Found"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "O chat está sendo processado por outra operação neste momento. Tente de novo em alguns segundos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 409,
+                  "message": "O chat ja foi capturado por outro usuario.",
+                  "error": "Conflict"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de 120 requisições por minuto por API key excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Rate limit exceeded. Maximum 120 requests per 60s per API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/channel-api/teams": {
+      "get": {
+        "summary": "Listar equipes",
+        "description": "Lista as equipes, para escolher o destino de uma transferência. Scope: `teams:read`.",
+        "security": [
+          {
+            "accountApiKey": []
+          }
+        ],
+        "x-scope": "teams:read",
+        "responses": {
+          "200": {
+            "description": "Equipes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nenhuma credencial válida (API key revogada, inexistente ou header ausente).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Credencial ausente ou inválida",
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credencial ausente/inválida para esta rota, key sem o scope exigido, chat inexistente ou fora dos canais permitidos da key. A API não diferencia os casos para não revelar a existência do recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Not Found",
+                  "error": "Not Found"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de 120 requisições por minuto por API key excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Rate limit exceeded. Maximum 120 requests per 60s per API key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/channel-api/users": {
+      "get": {
+        "summary": "Listar usuários",
+        "description": "Lista os usuários ativos e em onboarding (cancelados ficam de fora), para transferir ou capturar. Não retorna senha nem dados sensíveis além de nome e e-mail. Scope: `users:read`.",
+        "security": [
+          {
+            "accountApiKey": []
+          }
+        ],
+        "x-scope": "users:read",
+        "responses": {
+          "200": {
+            "description": "Usuários.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nenhuma credencial válida (API key revogada, inexistente ou header ausente).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 401,
+                  "message": "Credencial ausente ou inválida",
+                  "error": "Unauthorized"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credencial ausente/inválida para esta rota, key sem o scope exigido, chat inexistente ou fora dos canais permitidos da key. A API não diferencia os casos para não revelar a existência do recurso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 404,
+                  "message": "Not Found",
+                  "error": "Not Found"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de 120 requisições por minuto por API key excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "statusCode": 429,
+                  "message": "Rate limit exceeded. Maximum 120 requests per 60s per API key."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {
@@ -270,6 +809,12 @@
   },
   "components": {
     "securitySchemes": {
+      "accountApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "API key de conta, no formato `ApiKey <token>` (ex.: `ApiKey zk_live_...`). Criada em **Configurações → API Keys** por um usuário com a permissão `api_keys:manage`. O token é exibido uma única vez. Cada rota exige um scope; key sem o scope, ou recurso fora dos canais permitidos da key, responde `404`."
+      },
       "channelApiKey": {
         "type": "apiKey",
         "in": "header",
@@ -296,6 +841,238 @@
       }
     },
     "schemas": {
+      "ChatSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "66f2a1c9e4b0a1b2c3d4e5f6"
+          },
+          "status": {
+            "type": "string",
+            "example": "open"
+          },
+          "queue": {
+            "type": "string",
+            "description": "Fila atual: `Espera` (aguardando atendente da equipe), `Em Atendimento`, `Automação`, `API` ou a fila configurada no canal.",
+            "example": "Espera"
+          },
+          "channelId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "66f1f0c2e4b0a1b2c3d4e001"
+          },
+          "teamId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "66f1f0c2e4b0a1b2c3d4e100"
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Atendente atual; `null` quando ninguém está atendendo.",
+            "example": null
+          },
+          "contact": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "Cliente"
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Identificador do contato no canal (ex.: telefone).",
+                "example": "554396647639"
+              }
+            }
+          },
+          "unreadMessages": {
+            "type": "integer",
+            "example": 2
+          },
+          "lastMessage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Resumo da última mensagem (`origin`, `content`)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ChatList": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "example": 37
+          },
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 50
+          },
+          "hasNextPage": {
+            "type": "boolean",
+            "example": false
+          },
+          "nextPage": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": null
+          },
+          "chats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatSummary"
+            }
+          }
+        }
+      },
+      "TransferChatRequest": {
+        "type": "object",
+        "description": "Informe exatamente um destino: `teamId` ou `userId`.",
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "description": "Equipe de destino. O chat volta para a fila `Espera` da equipe, sem atendente."
+          },
+          "userId": {
+            "type": "string",
+            "description": "Usuário de destino. O chat fica `Em Atendimento` com esse usuário, mesmo que outro já estivesse atendendo."
+          },
+          "reasonCode": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Código do motivo, registrado no evento de transferência."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Motivo em texto livre."
+          }
+        }
+      },
+      "CaptureChatRequest": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "Usuário que assume o atendimento."
+          }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "66f1f0c2e4b0a1b2c3d4e100"
+          },
+          "name": {
+            "type": "string",
+            "example": "Suporte"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": null
+          },
+          "status": {
+            "type": "string",
+            "example": "active"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs dos usuários da equipe."
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "66f1f0c2e4b0a1b2c3d4e200"
+          },
+          "name": {
+            "type": "string",
+            "example": "Ana Souza"
+          },
+          "email": {
+            "type": "string",
+            "example": "ana@empresa.com"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "onboarding",
+              "active"
+            ],
+            "example": "active"
+          },
+          "role": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "example": "Atendente"
+              }
+            }
+          }
+        }
+      },
       "SendMessageRequest": {
         "type": "object",
         "required": ["contact", "message"],

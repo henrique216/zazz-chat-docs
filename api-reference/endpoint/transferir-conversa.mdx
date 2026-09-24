@@ -1,0 +1,21 @@
+---
+title: "Transferir conversa"
+openapi: "POST /channel-api/chats/{id}/transfer"
+---
+
+Exige uma [API key de conta](/api-reference/introduction#api-key-de-conta) com o scope `chats:transfer`.
+
+Informe **exatamente um** destino no corpo:
+
+| Destino | Campo | Resultado |
+|---------|-------|-----------|
+| Equipe | `teamId` | A conversa vai para a fila `Espera` da equipe, sem atendente |
+| Usuário | `userId` | A conversa fica `Em Atendimento` com o usuário |
+
+Use [Listar equipes](/api-reference/endpoint/listar-equipes) e [Listar usuários](/api-reference/endpoint/listar-usuarios) para obter os IDs.
+
+<Note>
+  A transferência funciona mesmo com a conversa já em atendimento: ela tira do atendente atual e passa ao destino. Para só pegar uma conversa da fila, use [Capturar atendimento](/api-reference/endpoint/capturar-atendimento).
+</Note>
+
+`reasonCode` e `reason` são opcionais e ficam registrados no evento de transferência da conversa. Como a ação não tem um usuário humano, o evento aparece como transferência automática.
