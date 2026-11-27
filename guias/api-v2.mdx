@@ -1,0 +1,110 @@
+---
+title: "API v2"
+description: "API pública v2 do Zazz Chat: endereço, autenticação, erros e diferenças para a v1"
+---
+
+A v2 é a API pública do Zazz Chat. Ela usa só a API key de conta e tem formato único de erro e de paginação.
+
+```
+https://api.zazzinternet.com/v2/...
+```
+
+## Autenticação
+
+Envie a API key de conta no header `Authorization`:
+
+```
+Authorization: ApiKey zk_live_...
+```
+
+Para criar a key, veja [API key de conta](/guias/introducao#api-key-de-conta). A chave de API do canal (`x-channel-api-key`) não funciona na v2.
+
+| Scope | Libera |
+|-------|--------|
+| `messages:send` | [Enviar mensagem](/api-reference/v2/enviar-mensagem) e [Status do envio](/api-reference/v2/status-envio) |
+| `chats:read` | [Listar conversas](/api-reference/v2/listar-conversas) e [Buscar conversas encerradas](/api-reference/v2/buscar-encerradas) |
+| `chats:transfer` | [Transferir conversa](/api-reference/v2/transferir-conversa) |
+| `chats:capture` | [Capturar atendimento](/api-reference/v2/capturar-atendimento) |
+| `teams:read` | [Listar equipes](/api-reference/v2/listar-equipes) |
+| `users:read` | [Listar usuários](/api-reference/v2/listar-usuarios) |
+
+<Note>
+  Na v2 não é preciso ativar a API na aba **API** do canal. O que vale são os canais e os scopes da key.
+</Note>
+
+<Warning>
+  Key sem o scope da rota ou canal fora dos canais da key respondem `404`, não `403`. A API não confirma a existência de recursos que a key não pode ver.
+</Warning>
+
+## Envio assíncrono
+
+[Enviar mensagem](/api-reference/v2/enviar-mensagem) responde `202` com um `requestId` antes de a mensagem sair. Consulte [Status do envio](/api-reference/v2/status-envio) com o mesmo `requestId`:
+
+| Status | Significado |
+|--------|-------------|
+| `accepted` | Aceita, ainda não processada |
+| `queued` | Registrada para envio |
+| `sent` | Enviada |
+| `failed` | Falhou; `failureCode` diz o motivo (ex.: `INVALID_CONTACT_VALUE`) |
+
+Só a key que enviou consulta o status, por até 7 dias.
+
+## Erros
+
+Todo erro tem o mesmo formato:
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "Requisição inválida",
+    "details": ["property extra should not exist"]
+  },
+  "requestId": "0b7e7f39-1d55-4a0e-9f8f-6a8a3c2f6a11"
+}
+```
+
+Toda resposta traz o header `X-Request-Id` com o mesmo `requestId`. Informe esse valor ao suporte.
+
+| `error.code` | Status |
+|--------------|--------|
+| `validation_failed` | `400` |
+| `unauthorized` | `401` |
+| `not_found` | `404` |
+| `conflict` | `409` |
+| `payload_too_large` | `413` |
+| `unsupported_media_type` | `415` |
+| `rate_limited` | `429` |
+| `service_unavailable` | `503` |
+| `internal_error` | `500` |
+
+## Limites
+
+- 120 requisições por minuto por key, somando v1 e v2, em todas as rotas menos o envio. Acima disso: `429`.
+- Corpo só JSON (`application/json`), até 20 MB.
+- Campo desconhecido no corpo responde `400`.
+
+## Paginação
+
+[Listar conversas](/api-reference/v2/listar-conversas) devolve `data` e `page`:
+
+```json
+{
+  "data": [],
+  "page": { "page": 1, "limit": 50, "total": 0, "hasNext": false }
+}
+```
+
+Use `page` e `limit` (até 100) na query.
+
+## Diferenças para a v1
+
+| | v1 | v2 |
+|---|----|----|
+| Endereço | `https://{host}/channel-api/...` | `https://api.zazzinternet.com/v2/...` |
+| Credencial do envio | Chave de API do canal | API key de conta com `messages:send` |
+| Ativar API no canal | Obrigatório para o envio | Não precisa |
+| Canal do envio | Vem da chave | `channelId` no corpo |
+| Status do envio | Logs da aba API do canal | `GET /v2/messages/{requestId}` |
+| Transferência | Duas rotas (equipe e usuário) | Uma rota, destino em `to` |
+| Erro | Varia por rota | `{ error: { code, message, details }, requestId }` |
