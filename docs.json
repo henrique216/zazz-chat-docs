@@ -20,7 +20,7 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["guias/api-v2"]
+                "pages": ["guias/api-v2", "guias/usar-com-ia"]
               },
               {
                 "group": "Integração",
@@ -73,7 +73,7 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["guias/introducao"]
+                "pages": ["guias/introducao", "guias/usar-com-ia"]
               },
               {
                 "group": "Integração",
@@ -154,7 +154,7 @@
     ]
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "add-mcp", "cursor", "vscode"]
   },
   "footer": {}
 }
