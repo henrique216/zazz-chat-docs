@@ -1,0 +1,129 @@
+---
+title: "Usar com IA"
+description: "Conecte esta documentação ao Claude, Cursor, VS Code ou outro assistente de IA para integrar com a API do Zazz Chat"
+---
+
+Esta documentação está pronta para assistentes de IA. Conecte o seu assistente a ela e peça a integração com a API: ele consulta as páginas atualizadas em vez de adivinhar campos e rotas.
+
+Há três formas, da mais completa para a mais simples:
+
+| Forma | Quando usar |
+|-------|-------------|
+| [Servidor MCP](#servidor-mcp) | O assistente pesquisa e lê a doc sozinho enquanto trabalha |
+| [Skill](#skill) | Agentes de código (Claude Code, Cursor e outros) ganham o contexto da doc instalado |
+| [llms.txt e Markdown](#llms-txt-e-markdown) | Colar a doc no chat ou ler por script |
+
+## Servidor MCP
+
+O servidor MCP desta documentação fica em:
+
+```
+https://docs.zazzinternet.com/mcp
+```
+
+Ele oferece ao assistente as ferramentas de **busca** na doc, **leitura** das páginas e **envio de feedback** sobre uma página que não ajudou. Não precisa de login.
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http zazz-chat-docs https://docs.zazzinternet.com/mcp
+    ```
+
+    Confira com `claude mcp list`.
+  </Tab>
+  <Tab title="Claude (app e web)">
+    <Steps>
+      <Step title="Abra os conectores">
+        Vá em [Configurações → Conectores](https://claude.ai/settings/connectors) e clique em **Adicionar conector personalizado**.
+      </Step>
+      <Step title="Informe o servidor">
+        Nome: `Zazz Chat Docs`. URL: `https://docs.zazzinternet.com/mcp`. Clique em **Adicionar**.
+      </Step>
+      <Step title="Use no chat">
+        No chat, clique no botão **+** e selecione o conector.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Cursor">
+    Abra a paleta de comandos, rode **Open MCP settings** e clique em **Add custom MCP**. No `mcp.json`, adicione:
+
+    ```json mcp.json
+    {
+      "mcpServers": {
+        "zazz-chat-docs": {
+          "url": "https://docs.zazzinternet.com/mcp"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="VS Code">
+    Crie o arquivo `.vscode/mcp.json` no projeto:
+
+    ```json .vscode/mcp.json
+    {
+      "servers": {
+        "zazz-chat-docs": {
+          "type": "http",
+          "url": "https://docs.zazzinternet.com/mcp"
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Codex">
+    Em `~/.codex/config.toml`:
+
+    ```toml ~/.codex/config.toml
+    [mcp_servers.zazz-chat-docs]
+    url = "https://docs.zazzinternet.com/mcp"
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  Em qualquer página, o menu **Copiar página** (ao lado do título) também copia a URL do MCP e instala o servidor direto no Cursor ou no VS Code.
+</Tip>
+
+## Skill
+
+A skill reúne o essencial desta documentação num arquivo que agentes de código carregam como contexto. Instale no projeto onde você vai integrar:
+
+```bash
+npx skills add https://docs.zazzinternet.com
+```
+
+O arquivo fica em [docs.zazzinternet.com/skill.md](https://docs.zazzinternet.com/skill.md). Agentes conectados ao [servidor MCP](#servidor-mcp) já encontram a skill por ele, sem instalar à parte.
+
+## llms.txt e Markdown
+
+| Endereço | Conteúdo |
+|----------|----------|
+| [`/llms.txt`](https://docs.zazzinternet.com/llms.txt) | Índice de todas as páginas, com link e descrição |
+| [`/llms-full.txt`](https://docs.zazzinternet.com/llms-full.txt) | A documentação inteira num arquivo só |
+| `<página>.md` | Qualquer página em Markdown. Ex.: [`/guias/api-v2.md`](https://docs.zazzinternet.com/guias/api-v2.md) |
+
+Para colar no chat, abra o `llms-full.txt` ou use **Copiar página** numa página específica.
+
+## Prompt para começar
+
+Com o servidor MCP ou a skill instalada, peça algo assim:
+
+```text Prompt
+Use a documentação do Zazz Chat (servidor MCP zazz-chat-docs) e implemente
+o envio de mensagens pela API v2 (POST /v2/messages).
+
+- Leia a API key da variável de ambiente ZAZZ_API_KEY. Nunca escreva a key no código.
+- Envie texto e mídia (base64 com mimetype).
+- Depois do 202, consulte GET /v2/messages/{requestId} até o status ser sent ou failed.
+- Trate os erros no formato { error: { code, message, details }, requestId }
+  e registre o requestId nos logs.
+```
+
+<Warning>
+  Use sempre a [API v2](/guias/api-v2). A v1 está descontinuada e sai do ar em 31/12/2026. Se o assistente sugerir `/channel-api/...` ou o header `x-channel-api-key`, peça para trocar pela v2.
+</Warning>
+
+<Warning>
+  Não cole a sua API key no chat do assistente. Guarde em variável de ambiente ou num cofre de segredos.
+</Warning>
