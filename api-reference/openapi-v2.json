@@ -1,0 +1,1680 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Zazz Chat — API v2",
+    "version": "2.0.0",
+    "description": "API pública v2 do Zazz Chat. Usa só a API key de conta, no header `Authorization: ApiKey <token>` (token `zk_live_…`, criado em **Configurações → API Keys**). Toda rota exige um scope.\n\n- Scope faltando ou canal fora dos canais da key: **404 `not_found`** (nunca 403).\n- Toda resposta traz o header `X-Request-Id`, o mesmo `requestId` do corpo de erro.\n- Limite: 120 requisições por minuto por key (somando v1 e v2) em todas as rotas, menos o envio.\n- Corpo só JSON (`application/json`), até 20 MB."
+  },
+  "servers": [
+    {
+      "url": "https://{host}",
+      "description": "API pública do Zazz Chat",
+      "variables": {
+        "host": {
+          "default": "api.zazzinternet.com",
+          "description": "Host da API pública"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "paths": {
+    "/v2/messages": {
+      "post": {
+        "summary": "Enviar mensagem",
+        "description": "Escopo `messages:send`. O canal precisa estar liberado para a chave. A mensagem entra na fila e a\nresposta sai antes do envio; acompanhe por `GET /v2/messages/{requestId}`. Sem limite por minuto.\n",
+        "operationId": "sendMessage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              },
+              "examples": {
+                "texto": {
+                  "summary": "Mensagem de texto",
+                  "value": {
+                    "channelId": "66cc000000000000000000d1",
+                    "contact": {
+                      "value": "554396647639",
+                      "name": "Cliente"
+                    },
+                    "message": {
+                      "type": "text",
+                      "text": {
+                        "value": "Olá! Sua fatura foi gerada."
+                      }
+                    },
+                    "metadata": {
+                      "erpInvoiceId": "123456"
+                    }
+                  }
+                },
+                "template": {
+                  "summary": "Mensagem de template",
+                  "value": {
+                    "channelId": "66cc000000000000000000d1",
+                    "contact": {
+                      "value": "554396647639"
+                    },
+                    "message": {
+                      "type": "template",
+                      "template": {
+                        "name": "faturamento_do_boleto",
+                        "language": "pt_BR",
+                        "variables": {
+                          "header": [
+                            {
+                              "value": "ABC123"
+                            }
+                          ],
+                          "body": [
+                            {
+                              "key": "valor_fatura",
+                              "value": "R$ 500,00"
+                            },
+                            {
+                              "key": "vencimento",
+                              "value": "10/08/2026"
+                            }
+                          ]
+                        },
+                        "mediaHeader": {
+                          "format": "document",
+                          "link": "https://example.com/boleto.pdf",
+                          "filename": "boleto.pdf"
+                        }
+                      }
+                    }
+                  }
+                },
+                "midia": {
+                  "summary": "Mensagem de mídia",
+                  "value": {
+                    "channelId": "66cc000000000000000000d1",
+                    "contact": {
+                      "value": "554396647639"
+                    },
+                    "message": {
+                      "type": "media",
+                      "media": {
+                        "mimetype": "application/pdf",
+                        "filename": "boleto.pdf",
+                        "caption": "Segue o boleto.",
+                        "base64": "JVBERi0xLjQK...",
+                        "mediaType": "document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Aceita na fila",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendMessageAccepted"
+                },
+                "example": {
+                  "requestId": "0b7e7f39-1d55-4a0e-9f8f-6a8a3c2f6a11",
+                  "status": "accepted"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/messages/{requestId}": {
+      "get": {
+        "summary": "Status do envio",
+        "description": "Escopo `messages:send`. Só a chave que enviou enxerga o envio, por até 7 dias depois do aceite.\n`accepted` = aceito pelo gateway e ainda não processado; `queued` = registrado para envio;\n`sent` = enviado; `failed` = falhou (`failureCode`, ex. `INVALID_CONTACT_VALUE`).\n",
+        "operationId": "getMessageStatus",
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status atual",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageStatus"
+                },
+                "example": {
+                  "requestId": "0b7e7f39-1d55-4a0e-9f8f-6a8a3c2f6a11",
+                  "status": "sent"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/chats": {
+      "get": {
+        "summary": "Listar conversas",
+        "description": "Escopo `chats:read`. Sem `channelId`, lista os canais liberados para a chave.",
+        "operationId": "listChats",
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "queue",
+            "in": "query",
+            "description": "Fila, ex. \"Espera\", \"Em Atendimento\", \"API\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de chats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "page"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Chat"
+                      }
+                    },
+                    "page": {
+                      "$ref": "#/components/schemas/Page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/chats/{id}/transfers": {
+      "post": {
+        "summary": "Transferir conversa",
+        "description": "Escopo `chats:transfer`. Informe exatamente um destino em `to`.",
+        "operationId": "transferChat",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ChatId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ChatResult"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/chats/{id}/capture": {
+      "post": {
+        "summary": "Capturar atendimento",
+        "description": "Escopo `chats:capture`.",
+        "operationId": "captureChat",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ChatId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ChatResult"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/teams": {
+      "get": {
+        "summary": "Listar equipes",
+        "description": "Escopo `teams:read`.",
+        "operationId": "listTeams",
+        "responses": {
+          "200": {
+            "description": "Equipes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Team"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/users": {
+      "get": {
+        "summary": "Listar usuários",
+        "description": "Escopo `users:read`.",
+        "operationId": "listUsers",
+        "responses": {
+          "200": {
+            "description": "Usuários",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v2/closed-chats/search": {
+      "post": {
+        "summary": "Buscar conversas encerradas",
+        "description": "Escopo `chats:read`. Mesmos filtros da busca de encerradas da v1. `channelIds` é cruzado com os\ncanais liberados para a chave (nunca amplia o acesso).\n",
+        "operationId": "searchClosedChats",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClosedChatsSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chats encerrados no período",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "total"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ClosedChat"
+                      }
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailed"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "API key de conta, no formato `ApiKey <token>` (ex.: `ApiKey zk_live_...`). Criada em **Configurações → API Keys**. O token é exibido uma única vez. Cada rota exige um scope; key sem o scope, ou canal fora dos canais da key, responde `404`."
+      }
+    },
+    "parameters": {
+      "ChatId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "ChatResult": {
+        "description": "Chat atualizado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": [
+                "data"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/Chat"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "Requisição inválida (`validation_failed`; `details` lista os problemas)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Chave ausente, inválida, revogada ou desligada (`unauthorized`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso inexistente, escopo faltando ou canal não liberado (`not_found`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Chat em atendimento por outro usuário (`conflict`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "description": "Corpo acima de 20 MB (`payload_too_large`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "UnsupportedMediaType": {
+        "description": "Corpo que não é JSON (`unsupported_media_type`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Mais de 120 requisições em 60 s para a chave (`rate_limited`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "Indisponível no momento, tente de novo (`service_unavailable`)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error",
+          "requestId"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "unauthorized",
+                  "not_found",
+                  "validation_failed",
+                  "unsupported_media_type",
+                  "payload_too_large",
+                  "conflict",
+                  "rate_limited",
+                  "service_unavailable",
+                  "internal_error"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "example": {
+          "error": {
+            "code": "validation_failed",
+            "message": "Requisição inválida",
+            "details": [
+              "property extra should not exist"
+            ]
+          },
+          "requestId": "0b7e7f39-1d55-4a0e-9f8f-6a8a3c2f6a11"
+        }
+      },
+      "Page": {
+        "type": "object",
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext"
+        ],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasNext": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channelId",
+          "contact",
+          "message"
+        ],
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "ID do canal que envia. Precisa estar entre os canais da key.",
+            "example": "66cc000000000000000000d1"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/Contact"
+          },
+          "message": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "flowId": {
+            "type": "string",
+            "description": "Identificador opcional de fluxo para correlação externa.",
+            "example": "flow-123"
+          },
+          "closeConversation": {
+            "type": "boolean",
+            "default": false,
+            "description": "Se `true`, encerra a conversa aberta do contato nesse canal antes de enviar a nova mensagem."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Metadados livres de correlação externa (chave/valor em string). Ficam registrados no log da requisição.",
+            "example": {
+              "erpInvoiceId": "123456"
+            }
+          }
+        }
+      },
+      "SendMessageAccepted": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "status"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted"
+            ]
+          }
+        }
+      },
+      "MessageStatus": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "status"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "queued",
+              "sent",
+              "failed"
+            ]
+          },
+          "failureCode": {
+            "type": "string",
+            "description": "Só quando `status` é `failed`"
+          }
+        }
+      },
+      "Chat": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "queue",
+          "channelId",
+          "teamId",
+          "userId",
+          "contact",
+          "unreadMessages",
+          "lastMessage"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "queue": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "teamId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contact": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "unreadMessages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastMessage": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransferRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "to"
+        ],
+        "properties": {
+          "to": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "teamId"
+                ],
+                "properties": {
+                  "teamId": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "status",
+          "members"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "role": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "ClosedChatsSearchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "closedAtFrom",
+          "closedAtTo"
+        ],
+        "properties": {
+          "closedAtFrom": {
+            "type": "string",
+            "description": "Data (2026-10-01) ou data-hora ISO"
+          },
+          "closedAtTo": {
+            "type": "string",
+            "description": "Data ou data-hora ISO; não pode ser antes de closedAtFrom"
+          },
+          "numbers": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          },
+          "contactIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          },
+          "userIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          },
+          "teamIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          },
+          "channelIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ClosedChat": {
+        "type": "object",
+        "required": [
+          "chatId",
+          "contactId",
+          "closedAt",
+          "messages"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "contactId": {
+            "type": "string"
+          },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "normalized": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "teamId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channelId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {},
+                "type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "pushName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "origin": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "direction": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "timestamp": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Contact": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Identificador do destinatário. Para WhatsApp, o telefone com DDI e DDD.",
+            "example": "554396647639"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "email"
+            ],
+            "default": "phone",
+            "description": "Tipo do contato para normalização. Se omitido, assume `phone`."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome amigável do destinatário. Usado apenas para contexto da requisição.",
+            "example": "Cliente"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "description": "Mensagem a ser enviada. O objeto correspondente ao `type` escolhido (`text`, `template` ou `media`) é obrigatório.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "template",
+              "media"
+            ],
+            "description": "Tipo da mensagem."
+          },
+          "text": {
+            "$ref": "#/components/schemas/TextMessage"
+          },
+          "template": {
+            "$ref": "#/components/schemas/TemplateMessage"
+          },
+          "media": {
+            "$ref": "#/components/schemas/MediaMessage"
+          }
+        }
+      },
+      "TextMessage": {
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "description": "Payload da mensagem de texto. Obrigatório quando `message.type = \"text\"`.",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "Texto da mensagem.",
+            "example": "Olá, mundo"
+          },
+          "pushName": {
+            "type": "string",
+            "description": "Push name opcional usado no contexto interno da mensagem.",
+            "example": "API"
+          }
+        }
+      },
+      "TemplateMessage": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "description": "Payload da mensagem de template. Obrigatório quando `message.type = \"template\"`.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nome do template aprovado no provider.",
+            "example": "faturamento_do_boleto"
+          },
+          "language": {
+            "type": "string",
+            "default": "pt_BR",
+            "description": "Idioma do template. Se omitido, usa `pt_BR`."
+          },
+          "variables": {
+            "$ref": "#/components/schemas/TemplateVariables"
+          },
+          "mediaHeader": {
+            "$ref": "#/components/schemas/TemplateMediaHeader"
+          },
+          "buttons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateButton"
+            },
+            "description": "Botões especiais montados pelo backend (hoje apenas `order_details`). Placeholders textuais de botão continuam em `variables.buttons`."
+          }
+        }
+      },
+      "TemplateVariables": {
+        "type": "object",
+        "description": "Variáveis do template agrupadas por componente. Um array simples no lugar deste objeto também é aceito e tratado como `body` (formato legado).",
+        "properties": {
+          "header": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateVariableValue"
+            },
+            "description": "Valores do header do template."
+          },
+          "body": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateVariableValue"
+            },
+            "description": "Valores do body do template."
+          },
+          "buttons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateVariableValue"
+            },
+            "description": "Valores de placeholders textuais em botões do template. Não use este campo para `order_details`."
+          }
+        }
+      },
+      "TemplateVariableValue": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Forma curta posicional: apenas o valor do placeholder, na ordem."
+          },
+          {
+            "type": "object",
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Nome da variável nomeada no template da Meta. Quando informado, o sistema envia `parameter_name` no parâmetro correspondente.",
+                "example": "valor_fatura"
+              },
+              "correlationId": {
+                "type": "number",
+                "description": "Posição legada do placeholder no componente. Usado quando `key` não é informado.",
+                "example": 0
+              },
+              "value": {
+                "type": "string",
+                "description": "Valor final enviado para o placeholder do template.",
+                "example": "R$ 500,00"
+              }
+            }
+          }
+        ]
+      },
+      "TemplateMediaHeader": {
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "description": "Header de mídia do template, quando existir componente de mídia. Informe `link` (URL pública HTTPS) ou `fileId` (mídia já existente no provider).",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "document"
+            ],
+            "description": "Tipo do header de mídia."
+          },
+          "fileId": {
+            "type": "string",
+            "description": "ID já existente de mídia no provider, quando aplicável.",
+            "example": "1234567890"
+          },
+          "link": {
+            "type": "string",
+            "description": "URL pública HTTPS do arquivo a ser usado no header.",
+            "example": "https://example.com/boleto.pdf"
+          },
+          "filename": {
+            "type": "string",
+            "description": "Nome do arquivo enviado ao provider quando o formato for `document`.",
+            "example": "boleto.pdf"
+          }
+        }
+      },
+      "TemplateButton": {
+        "type": "object",
+        "required": [
+          "index",
+          "type",
+          "orderDetails"
+        ],
+        "properties": {
+          "index": {
+            "type": "number",
+            "description": "Índice do botão dentro do template aprovado pela Meta.",
+            "example": 0
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "order_details"
+            ],
+            "description": "Tipo do botão especial montado pelo backend."
+          },
+          "orderDetails": {
+            "$ref": "#/components/schemas/OrderDetails"
+          }
+        }
+      },
+      "OrderDetails": {
+        "type": "object",
+        "required": [
+          "referenceId",
+          "type",
+          "paymentType",
+          "currency",
+          "totalAmount",
+          "paymentSettings",
+          "order"
+        ],
+        "description": "Payload semântico do botão de `order_details` (ex.: cobrança Pix via WhatsApp).",
+        "properties": {
+          "referenceId": {
+            "type": "string",
+            "description": "Identificador único da cobrança/pedido no sistema emissor.",
+            "example": "boleto-123456-20260402"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo do pedido aceito pelo provider.",
+            "example": "digital-goods"
+          },
+          "paymentType": {
+            "type": "string",
+            "description": "Método/região de pagamento configurado no provider.",
+            "example": "br"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Moeda do pedido.",
+            "example": "BRL"
+          },
+          "totalAmount": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "paymentSettings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaymentSetting"
+            },
+            "description": "Configurações de pagamento disponibilizadas para a cobrança."
+          },
+          "order": {
+            "$ref": "#/components/schemas/OrderPayload"
+          }
+        }
+      },
+      "Amount": {
+        "type": "object",
+        "required": [
+          "value",
+          "offset"
+        ],
+        "description": "Valor monetário no menor valor da moeda com offset decimal. `{ \"value\": 50000, \"offset\": 100 }` = R$ 500,00.",
+        "properties": {
+          "value": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Valor no menor valor da moeda. Aceita inteiro já normalizado (ex.: `12990`) ou string decimal de ERP (ex.: `\"129,90\"`), convertida automaticamente usando o `offset`.",
+            "example": 50000
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset decimal usado pelo provider. Ex.: `100` representa 2 casas decimais.",
+            "example": 100
+          }
+        }
+      },
+      "PaymentSetting": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "pix_dynamic_code"
+            ],
+            "description": "Tipo da configuração de pagamento."
+          },
+          "pixDynamicCode": {
+            "$ref": "#/components/schemas/PixDynamicCode"
+          }
+        }
+      },
+      "PixDynamicCode": {
+        "type": "object",
+        "required": [
+          "code",
+          "merchantName",
+          "key",
+          "keyType"
+        ],
+        "description": "Configuração do Pix dinâmico. Obrigatória quando `type = \"pix_dynamic_code\"`.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Código Pix dinâmico completo retornado pelo PSP.",
+            "example": "00020101021226700014br.gov.bcb.pix2548pix.example.com..."
+          },
+          "merchantName": {
+            "type": "string",
+            "description": "Nome do recebedor exibido pelo provedor de pagamentos.",
+            "example": "Zazz Internet"
+          },
+          "key": {
+            "type": "string",
+            "description": "Chave Pix usada na cobrança.",
+            "example": "39580525000189"
+          },
+          "keyType": {
+            "type": "string",
+            "description": "Tipo da chave Pix.",
+            "example": "CNPJ"
+          }
+        }
+      },
+      "OrderPayload": {
+        "type": "object",
+        "required": [
+          "status",
+          "items",
+          "subtotal"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Status atual do pedido enviado ao cliente.",
+            "example": "pending"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            },
+            "description": "Itens do pedido."
+          },
+          "subtotal": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "tax": {
+            "$ref": "#/components/schemas/OrderTax"
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": [
+          "retailerId",
+          "name",
+          "amount",
+          "quantity"
+        ],
+        "properties": {
+          "retailerId": {
+            "type": "string",
+            "description": "ID estável do item no sistema do emissor.",
+            "example": "1234567"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome exibido do item.",
+            "example": "Mensalidade"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Amount"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantidade do item.",
+            "example": 1
+          }
+        }
+      },
+      "OrderTax": {
+        "type": "object",
+        "required": [
+          "value",
+          "offset"
+        ],
+        "description": "Dados de imposto do pedido.",
+        "properties": {
+          "value": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Valor do imposto no menor valor da moeda."
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset decimal usado pelo provider.",
+            "example": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrição opcional do imposto."
+          }
+        }
+      },
+      "MediaMessage": {
+        "type": "object",
+        "required": [
+          "mimetype",
+          "base64"
+        ],
+        "description": "Payload da mensagem de mídia. Obrigatório quando `message.type = \"media\"`. Hoje o envio exige o conteúdo em `base64`; o campo `mediaUrl` existe no schema mas ainda não é aceito no processamento.",
+        "properties": {
+          "mimetype": {
+            "type": "string",
+            "description": "Mimetype da mídia enviada.",
+            "example": "application/pdf"
+          },
+          "base64": {
+            "type": "string",
+            "description": "Conteúdo do arquivo em base64, sem prefixo `data:`. Obrigatório."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Nome do arquivo.",
+            "example": "boleto.pdf"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Legenda da mídia, quando o provider suporta.",
+            "example": "Segue o boleto."
+          },
+          "mediaUrl": {
+            "type": "string",
+            "description": "Reservado. URL pública da mídia — ainda não aceito no processamento; envie `base64`."
+          },
+          "mediaType": {
+            "type": "string",
+            "description": "Tipo lógico usado ao persistir a mensagem.",
+            "example": "document"
+          }
+        }
+      }
+    }
+  }
+}

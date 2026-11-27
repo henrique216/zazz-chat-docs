@@ -1,0 +1,77 @@
+---
+title: "Enviar mensagem"
+openapi: "api-reference/openapi-v2.json POST /v2/messages"
+---
+
+O envio é **assíncrono**: a resposta `202` traz um `requestId` antes de a mensagem sair. Acompanhe o resultado em [Status do envio](/api-reference/v2/status-envio).
+
+O corpo é o mesmo da v1, com o `channelId` do canal que envia. Não é preciso ativar a API na aba **API** do canal: basta o canal estar entre os canais da key e a key ter o scope `messages:send`.
+
+## Exemplos
+
+<CodeGroup>
+
+```bash Texto
+curl -X POST "https://api.zazzinternet.com/v2/messages" \
+  -H "Authorization: ApiKey zk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelId": "66cc000000000000000000d1",
+    "contact": { "value": "5511999990000", "type": "phone", "name": "Cliente" },
+    "message": { "type": "text", "text": { "value": "Olá, tudo bem?" } }
+  }'
+```
+
+```bash Imagem
+IMG=$(base64 -w0 foto.png)
+cat > corpo.json <<EOF
+{
+  "channelId": "66cc000000000000000000d1",
+  "contact": { "value": "5511999990000", "type": "phone" },
+  "message": {
+    "type": "media",
+    "media": {
+      "mimetype": "image/png",
+      "filename": "foto.png",
+      "caption": "Segue a foto",
+      "base64": "$IMG"
+    }
+  }
+}
+EOF
+curl -X POST "https://api.zazzinternet.com/v2/messages" \
+  -H "Authorization: ApiKey zk_live_..." \
+  -H "Content-Type: application/json" \
+  --data-binary @corpo.json
+```
+
+</CodeGroup>
+
+Resposta:
+
+```json
+{ "requestId": "0b7e7f39-1d55-4a0e-9f8f-6a8a3c2f6a11", "status": "accepted" }
+```
+
+## Mídia
+
+<Warning>
+  O conteúdo vai em `base64` (sem prefixo `data:`), com `mimetype`. O campo `mediaUrl` sozinho não é aceito. O corpo inteiro tem limite de 20 MB.
+</Warning>
+
+O tipo `media` serve para imagem, PDF, áudio e vídeo: mude o `mimetype`. Para arquivos maiores, grave o JSON em arquivo e envie com `--data-binary @arquivo`, como no exemplo acima.
+
+## Template
+
+Variáveis de template, cabeçalho de mídia e botão `order_details` (Pix) seguem o mesmo formato da v1. Veja [Variáveis de template](/api-reference/endpoint/enviar-mensagem#variáveis-de-template) e [Botão order_details](/api-reference/endpoint/enviar-mensagem#botão-order-details-pix).
+
+## Erros
+
+| Status | `error.code` | Quando |
+|--------|--------------|--------|
+| `400` | `validation_failed` | Campo inválido ou campo desconhecido no corpo (`details` lista os problemas) |
+| `401` | `unauthorized` | Key ausente, inválida ou revogada |
+| `404` | `not_found` | Key sem o scope `messages:send` ou canal fora dos canais da key |
+| `413` | `payload_too_large` | Corpo acima de 20 MB |
+| `415` | `unsupported_media_type` | Corpo que não é JSON |
+| `503` | `service_unavailable` | Indisponível no momento; tente de novo |

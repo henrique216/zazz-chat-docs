@@ -4,5 +4,9 @@ openapi: "POST /channel-api/chats/{id}/capture"
 ---
 
 <Warning>
+  **API v1 legada.** Esta versão está descontinuada e sai do ar em **31/12/2026**. Migre para a [API v2](/guias/api-v2).
+</Warning>
+
+<Warning>
   A captura é recusada com `400` se a conversa já está `Em Atendimento`. Para reatribuir, use [Transferir para usuário](/api-reference/endpoint/transferir-para-usuario).
 </Warning>

@@ -15,21 +15,58 @@
         "groups": [
           {
             "group": "Começando",
-            "pages": ["guias/introducao"]
+            "pages": [
+              "guias/introducao",
+              "guias/api-v2"
+            ]
           },
           {
             "group": "Integração",
-            "pages": ["guias/webhooks", "guias/socket"]
+            "pages": [
+              "guias/webhooks",
+              "guias/socket"
+            ]
           }
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "API v2",
+        "openapi": "api-reference/openapi-v2.json",
+        "groups": [
+          {
+            "group": "Mensagens",
+            "pages": [
+              "api-reference/v2/enviar-mensagem",
+              "api-reference/v2/status-envio"
+            ]
+          },
+          {
+            "group": "Conversas",
+            "pages": [
+              "api-reference/v2/listar-conversas",
+              "api-reference/v2/transferir-conversa",
+              "api-reference/v2/capturar-atendimento",
+              "api-reference/v2/buscar-encerradas"
+            ]
+          },
+          {
+            "group": "Equipes e usuários",
+            "pages": [
+              "api-reference/v2/listar-equipes",
+              "api-reference/v2/listar-usuarios"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API v1 (legada)",
         "openapi": "api-reference/openapi.json",
         "groups": [
           {
             "group": "Mensagens",
-            "pages": ["api-reference/endpoint/enviar-mensagem"]
+            "pages": [
+              "api-reference/endpoint/enviar-mensagem"
+            ]
           },
           {
             "group": "Conversas",
@@ -67,11 +104,26 @@
     ]
   },
   "redirects": [
-    { "source": "/api-reference/introduction", "destination": "/guias/introducao" },
-    { "source": "/api-reference/webhook", "destination": "/guias/webhooks" },
-    { "source": "/api-reference/socket/introducao", "destination": "/guias/socket" },
-    { "source": "/api-reference/endpoint/resolucao-responsavel", "destination": "/guias/introducao" },
-    { "source": "/api-reference/endpoint/transferir-conversa", "destination": "/api-reference/endpoint/transferir-para-equipe" }
+    {
+      "source": "/api-reference/introduction",
+      "destination": "/guias/introducao"
+    },
+    {
+      "source": "/api-reference/webhook",
+      "destination": "/guias/webhooks"
+    },
+    {
+      "source": "/api-reference/socket/introducao",
+      "destination": "/guias/socket"
+    },
+    {
+      "source": "/api-reference/endpoint/resolucao-responsavel",
+      "destination": "/guias/introducao"
+    },
+    {
+      "source": "/api-reference/endpoint/transferir-conversa",
+      "destination": "/api-reference/endpoint/transferir-para-equipe"
+    }
   ],
   "logo": {
     "light": "/logo/light.svg",
@@ -97,5 +149,9 @@
       "vscode"
     ]
   },
-  "footer": {}
+  "footer": {},
+  "banner": {
+    "content": "A API v1 está **descontinuada** e sai do ar em 31/12/2026. [Migre para a API v2](/guias/api-v2).",
+    "dismissible": true
+  }
 }

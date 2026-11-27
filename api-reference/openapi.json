@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Zazz Chat — Channel API",
-    "description": "Channel API do Zazz Chat: envio de mensagens, roteamento de conversas e webhook de eventos. Há duas credenciais: a chave de API do canal (header `x-channel-api-key`) e a API key de conta (header `Authorization: ApiKey <token>`), com scopes e canais permitidos.",
+    "title": "Zazz Chat — API v1 (legada)",
+    "description": "**Descontinuada:** a v1 sai do ar em 31/12/2026. Use a [API v2](/guias/api-v2). Channel API do Zazz Chat: envio de mensagens, roteamento de conversas e webhook de eventos. Há duas credenciais: a chave de API do canal (header `x-channel-api-key`) e a API key de conta (header `Authorization: ApiKey <token>`), com scopes e canais permitidos.",
     "version": "1.0.0"
   },
   "servers": [
@@ -26,6 +26,7 @@
     "/channel-api/messages/send": {
       "post": {
         "summary": "Enviar mensagem",
+        "deprecated": true,
         "description": "Enfileira o envio de uma mensagem de texto, template ou mídia pelo canal associado à chave de API. O envio é **assíncrono**: a resposta retorna imediatamente um `requestId` para correlação, e o processamento acontece em background. O status de cada envio pode ser acompanhado nos logs da aba **API** do canal.",
         "operationId": "sendChannelMessage",
         "requestBody": {
@@ -144,6 +145,7 @@
     "/channel-api/chats": {
       "get": {
         "summary": "Listar conversas",
+        "deprecated": true,
         "description": "Lista as conversas abertas (fila `Observação` fica de fora), da mais recente para a mais antiga. Sem `channelId`, uma key com canais selecionados só vê esses canais. Scope: `chats:read`.",
         "security": [
           {
@@ -282,6 +284,7 @@
     "/channel-api/chats/{id}/transfer/team": {
       "post": {
         "summary": "Transferir para equipe",
+        "deprecated": true,
         "description": "Transfere a conversa para uma equipe. Ela vai para a fila `Espera` da equipe, sem atendente — inclusive se alguém estava atendendo. Scope: `chats:transfer`.",
         "security": [
           {
@@ -392,6 +395,7 @@
     "/channel-api/chats/{id}/transfer/user": {
       "post": {
         "summary": "Transferir para usuário",
+        "deprecated": true,
         "description": "Transfere a conversa para um usuário. Ela fica `Em Atendimento` com ele, mesmo que outro atendente já estivesse atendendo. Para só pegar da fila, use **Capturar atendimento**. Scope: `chats:transfer`.",
         "security": [
           {
@@ -515,6 +519,7 @@
     "/channel-api/chats/{id}/capture": {
       "post": {
         "summary": "Capturar atendimento",
+        "deprecated": true,
         "description": "Um usuário assume a conversa que está na fila. Recusada se a conversa já está `Em Atendimento` — para tirar de um atendente e passar a outro, use **Transferir para usuário**. Scope: `chats:capture`.",
         "security": [
           {
@@ -638,6 +643,7 @@
     "/channel-api/teams": {
       "get": {
         "summary": "Listar equipes",
+        "deprecated": true,
         "description": "Lista as equipes, para escolher o destino de uma transferência. Scope: `teams:read`.",
         "security": [
           {
@@ -709,6 +715,7 @@
     "/channel-api/users": {
       "get": {
         "summary": "Listar usuários",
+        "deprecated": true,
         "description": "Lista os usuários ativos e em onboarding (cancelados ficam de fora), para transferir ou capturar. Não retorna senha nem dados sensíveis além de nome e e-mail. Scope: `users:read`.",
         "security": [
           {
