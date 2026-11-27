@@ -9,94 +9,112 @@
   },
   "favicon": "/favicon.svg",
   "navigation": {
-    "tabs": [
+    "versions": [
       {
-        "tab": "Guias",
-        "groups": [
+        "version": "v2",
+        "default": true,
+        "tag": "Latest",
+        "tabs": [
           {
-            "group": "Começando",
-            "pages": [
-              "guias/introducao",
-              "guias/api-v2"
+            "tab": "Guias",
+            "groups": [
+              {
+                "group": "Começando",
+                "pages": ["guias/api-v2"]
+              },
+              {
+                "group": "Integração",
+                "pages": ["guias/webhooks", "guias/socket"]
+              }
             ]
           },
           {
-            "group": "Integração",
-            "pages": [
-              "guias/webhooks",
-              "guias/socket"
+            "tab": "API Reference",
+            "openapi": "/api-reference/openapi-v2.json",
+            "groups": [
+              {
+                "group": "Mensagens",
+                "pages": ["api-reference/v2/enviar-mensagem", "api-reference/v2/status-envio"]
+              },
+              {
+                "group": "Conversas",
+                "pages": [
+                  "api-reference/v2/listar-conversas",
+                  "api-reference/v2/transferir-conversa",
+                  "api-reference/v2/capturar-atendimento",
+                  "api-reference/v2/buscar-encerradas"
+                ]
+              },
+              {
+                "group": "Equipes e usuários",
+                "pages": ["api-reference/v2/listar-equipes", "api-reference/v2/listar-usuarios"]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "api-reference/webhooks/mensagem-recebida",
+                  "api-reference/webhooks/mensagem-enviada",
+                  "api-reference/webhooks/ping-de-teste"
+                ]
+              },
+              {
+                "group": "Socket (Tempo real)",
+                "pages": ["api-reference/socket/eventos-cliente", "api-reference/socket/eventos-servidor"]
+              }
             ]
           }
         ]
       },
       {
-        "tab": "API v2",
-        "openapi": "api-reference/openapi-v2.json",
-        "groups": [
+        "version": "v1",
+        "tag": "Deprecated",
+        "tabs": [
           {
-            "group": "Mensagens",
-            "pages": [
-              "api-reference/v2/enviar-mensagem",
-              "api-reference/v2/status-envio"
+            "tab": "Guias",
+            "groups": [
+              {
+                "group": "Começando",
+                "pages": ["guias/introducao"]
+              },
+              {
+                "group": "Integração",
+                "pages": ["guias/webhooks", "guias/socket"]
+              }
             ]
           },
           {
-            "group": "Conversas",
-            "pages": [
-              "api-reference/v2/listar-conversas",
-              "api-reference/v2/transferir-conversa",
-              "api-reference/v2/capturar-atendimento",
-              "api-reference/v2/buscar-encerradas"
-            ]
-          },
-          {
-            "group": "Equipes e usuários",
-            "pages": [
-              "api-reference/v2/listar-equipes",
-              "api-reference/v2/listar-usuarios"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API v1 (legada)",
-        "openapi": "api-reference/openapi.json",
-        "groups": [
-          {
-            "group": "Mensagens",
-            "pages": [
-              "api-reference/endpoint/enviar-mensagem"
-            ]
-          },
-          {
-            "group": "Conversas",
-            "pages": [
-              "api-reference/endpoint/listar-conversas",
-              "api-reference/endpoint/transferir-para-equipe",
-              "api-reference/endpoint/transferir-para-usuario",
-              "api-reference/endpoint/capturar-atendimento"
-            ]
-          },
-          {
-            "group": "Equipes e usuários",
-            "pages": [
-              "api-reference/endpoint/listar-equipes",
-              "api-reference/endpoint/listar-usuarios"
-            ]
-          },
-          {
-            "group": "Webhooks",
-            "pages": [
-              "api-reference/webhooks/mensagem-recebida",
-              "api-reference/webhooks/mensagem-enviada",
-              "api-reference/webhooks/ping-de-teste"
-            ]
-          },
-          {
-            "group": "Socket (Tempo real)",
-            "pages": [
-              "api-reference/socket/eventos-cliente",
-              "api-reference/socket/eventos-servidor"
+            "tab": "API Reference",
+            "openapi": "/api-reference/openapi.json",
+            "groups": [
+              {
+                "group": "Mensagens",
+                "pages": ["api-reference/endpoint/enviar-mensagem"]
+              },
+              {
+                "group": "Conversas",
+                "pages": [
+                  "api-reference/endpoint/listar-conversas",
+                  "api-reference/endpoint/transferir-para-equipe",
+                  "api-reference/endpoint/transferir-para-usuario",
+                  "api-reference/endpoint/capturar-atendimento"
+                ]
+              },
+              {
+                "group": "Equipes e usuários",
+                "pages": ["api-reference/endpoint/listar-equipes", "api-reference/endpoint/listar-usuarios"]
+              },
+              {
+                "group": "Webhooks",
+                "pages": [
+                  "api-reference/webhooks/mensagem-recebida",
+                  "api-reference/webhooks/mensagem-enviada",
+                  "api-reference/webhooks/ping-de-teste"
+                ]
+              },
+              {
+                "group": "Socket (Tempo real)",
+                "pages": ["api-reference/socket/eventos-cliente", "api-reference/socket/eventos-servidor"]
+              }
             ]
           }
         ]
@@ -138,20 +156,12 @@
     ]
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
   },
   "footer": {},
   "banner": {
     "content": "A API v1 está **descontinuada** e sai do ar em 31/12/2026. [Migre para a API v2](/guias/api-v2).",
-    "dismissible": true
+    "dismissible": true,
+    "type": "warning"
   }
 }
