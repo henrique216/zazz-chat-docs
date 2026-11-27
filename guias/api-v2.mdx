@@ -17,7 +17,23 @@ Envie a API key de conta no header `Authorization`:
 Authorization: ApiKey zk_live_...
 ```
 
-Para criar a key, veja [API key de conta](/guias/introducao#api-key-de-conta). A chave de API do canal (`x-channel-api-key`) não funciona na v2.
+A chave de API do canal (`x-channel-api-key`) não funciona na v2.
+
+### Criar a API key
+
+<Steps>
+  <Step title="Acesse as API Keys">
+    No painel, vá em **Configurações → API Keys**. A tela exige a permissão `api_keys:manage`.
+  </Step>
+  <Step title="Crie a key">
+    Clique em **Criar API key**, dê um nome e escolha **Todos os canais** ou canais específicos. Marque só os scopes que a integração usa.
+  </Step>
+  <Step title="Copie o token">
+    O token (`zk_live_...`) aparece **uma única vez**. Guarde em local seguro. Se ele vazar, revogue a key ou rotacione para gerar um token novo.
+  </Step>
+</Steps>
+
+### Scopes
 
 | Scope | Libera |
 |-------|--------|
