@@ -1,0 +1,24 @@
+---
+title: "Claude Code"
+description: "Conecte a documentação do Zazz Chat ao Claude Code pelo servidor MCP e pela skill"
+---
+
+## Servidor MCP
+
+```bash
+claude mcp add --transport http zazz-chat-docs https://docs.zazzinternet.com/mcp
+```
+
+Confira com `claude mcp list`.
+
+## Skill
+
+No projeto onde você vai integrar:
+
+```bash
+npx skills add https://docs.zazzinternet.com
+```
+
+## Próximo passo
+
+Peça a integração com o [prompt para começar](/ai-tools/visao-geral#prompt-para-começar). Use sempre a [API v2](/guias/api-v2).

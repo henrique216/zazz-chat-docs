@@ -1674,6 +1674,214 @@
             "example": "document"
           }
         }
+      },
+      "MessageEvent": {
+        "type": "object",
+        "required": [
+          "eventType",
+          "direction",
+          "timestamp",
+          "content"
+        ],
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "message.incoming",
+              "message.outgoing"
+            ],
+            "description": "`message.incoming` para o evento `message_received`; `message.outgoing` para `message_sent`."
+          },
+          "messageId": {
+            "type": "string",
+            "description": "ID da mensagem (quando disponível, o ID do provider)."
+          },
+          "chatId": {
+            "type": "string",
+            "description": "ID do chat no Zazz Chat."
+          },
+          "contactId": {
+            "type": "string",
+            "description": "ID do contato no Zazz Chat."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "incoming",
+              "outgoing"
+            ],
+            "description": "Direção da mensagem."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Data/hora da mensagem em ISO 8601."
+          },
+          "engine": {
+            "type": "string",
+            "description": "Provider/engine do canal (quando disponível).",
+            "example": "whatsapp"
+          },
+          "origin": {
+            "type": "string",
+            "description": "Origem da mensagem (quando disponível)."
+          },
+          "state": {
+            "type": "string",
+            "description": "Estado da mensagem no momento do evento (quando disponível)."
+          },
+          "content": {
+            "description": "Conteúdo da mensagem. A estrutura varia conforme o tipo (texto, mídia, template etc.)."
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "message_received": {
+      "post": {
+        "summary": "Mensagem recebida",
+        "description": "Disparado quando uma mensagem é **recebida** de um contato no canal. Enviado como `POST` para a URL configurada na aba Webhook do canal, com assinatura HMAC-SHA256 nos headers `X-Webhook-Signature` e `X-Webhook-Timestamp`.",
+        "operationId": "messageReceivedWebhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageEvent"
+              },
+              "example": {
+                "eventType": "message.incoming",
+                "messageId": "wamid.HBgNNTU0Mzk2NjQ3NjM5...",
+                "chatId": "665f1c2b8a9d4e2fb1c39d8e",
+                "contactId": "664a0b1c2d3e4f5a6b7c8d9e",
+                "direction": "incoming",
+                "timestamp": "2026-07-14T12:34:56.789Z",
+                "engine": "whatsapp",
+                "origin": "contact",
+                "state": "received",
+                "content": {
+                  "type": "text",
+                  "text": "Olá, preciso de ajuda"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responda com qualquer status `2xx` para confirmar o recebimento. Timeout de 10s por tentativa; erros de rede, `5xx` e `429` são retentados até 5 vezes com backoff exponencial."
+          }
+        }
+      }
+    },
+    "message_sent": {
+      "post": {
+        "summary": "Mensagem enviada",
+        "description": "Disparado quando uma mensagem é **enviada** pelo canal (por agente, bot ou pela própria Channel API). Enviado como `POST` para a URL configurada na aba Webhook do canal, com assinatura HMAC-SHA256 nos headers `X-Webhook-Signature` e `X-Webhook-Timestamp`.",
+        "operationId": "messageSentWebhook",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageEvent"
+              },
+              "example": {
+                "eventType": "message.outgoing",
+                "messageId": "wamid.HBgNNTU0Mzk2NjQ3NjM5...",
+                "chatId": "665f1c2b8a9d4e2fb1c39d8e",
+                "contactId": "664a0b1c2d3e4f5a6b7c8d9e",
+                "direction": "outgoing",
+                "timestamp": "2026-07-14T12:34:56.789Z",
+                "engine": "whatsapp",
+                "origin": "api",
+                "state": "sent",
+                "content": {
+                  "type": "text",
+                  "text": "Olá! Sua fatura foi gerada."
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responda com qualquer status `2xx` para confirmar o recebimento. Timeout de 10s por tentativa; erros de rede, `5xx` e `429` são retentados até 5 vezes com backoff exponencial."
+          }
+        }
+      }
+    },
+    "webhook_test": {
+      "post": {
+        "summary": "Ping de teste",
+        "description": "Disparado manualmente pelo botão de teste na aba Webhook do canal, para validar a URL e o secret configurados.",
+        "operationId": "webhookTestPing",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WebhookSignature"
+          },
+          {
+            "$ref": "#/components/parameters/WebhookTimestamp"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "eventType": {
+                    "type": "string",
+                    "const": "webhook.test",
+                    "description": "Sempre `webhook.test`."
+                  },
+                  "channelId": {
+                    "type": "string",
+                    "description": "ID do canal que disparou o teste."
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Data/hora do disparo em ISO 8601."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Texto fixo de identificação do ping."
+                  }
+                }
+              },
+              "example": {
+                "eventType": "webhook.test",
+                "channelId": "664a0b1c2d3e4f5a6b7c8d9e",
+                "timestamp": "2026-07-14T12:34:56.789Z",
+                "message": "Ping de teste do webhook do canal (Synkra)."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responda com qualquer status `2xx`. O status HTTP e o tempo de resposta são exibidos na interface."
+          }
+        }
       }
     }
   }

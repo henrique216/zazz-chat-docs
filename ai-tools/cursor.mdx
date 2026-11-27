@@ -1,0 +1,32 @@
+---
+title: "Cursor"
+description: "Conecte a documentação do Zazz Chat ao Cursor pelo servidor MCP e pela skill"
+---
+
+## Servidor MCP
+
+Abra a paleta de comandos, rode **Open MCP settings** e clique em **Add custom MCP**. No `mcp.json`, adicione:
+
+```json mcp.json
+{
+  "mcpServers": {
+    "zazz-chat-docs": {
+      "url": "https://docs.zazzinternet.com/mcp"
+    }
+  }
+}
+```
+
+Ou instale pelo menu **Copiar página**, ao lado do título de qualquer página desta doc.
+
+## Skill
+
+No projeto onde você vai integrar:
+
+```bash
+npx skills add https://docs.zazzinternet.com
+```
+
+## Próximo passo
+
+Peça a integração com o [prompt para começar](/ai-tools/visao-geral#prompt-para-começar). Use sempre a [API v2](/guias/api-v2).
