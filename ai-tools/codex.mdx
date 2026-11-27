@@ -1,0 +1,25 @@
+---
+title: "Codex"
+description: "Conecte a documentação do Zazz Chat ao Codex pelo servidor MCP e pela skill"
+---
+
+## Servidor MCP
+
+Em `~/.codex/config.toml`:
+
+```toml ~/.codex/config.toml
+[mcp_servers.zazz-chat-docs]
+url = "https://docs.zazzinternet.com/mcp"
+```
+
+## Skill
+
+No projeto onde você vai integrar:
+
+```bash
+npx skills add https://docs.zazzinternet.com
+```
+
+## Próximo passo
+
+Peça a integração com o [prompt para começar](/ai-tools/visao-geral#prompt-para-começar). Use sempre a [API v2](/guias/api-v2).

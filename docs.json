@@ -20,11 +20,22 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["guias/api-v2", "guias/usar-com-ia"]
+                "pages": ["guias/api-v2"]
               },
               {
                 "group": "Integração",
                 "pages": ["guias/webhooks", "guias/socket"]
+              },
+              {
+                "group": "Ferramentas de IA",
+                "pages": [
+                  "ai-tools/visao-geral",
+                  "ai-tools/claude-code",
+                  "ai-tools/claude",
+                  "ai-tools/cursor",
+                  "ai-tools/vscode",
+                  "ai-tools/codex"
+                ]
               }
             ]
           },
@@ -73,11 +84,22 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["guias/introducao", "guias/usar-com-ia"]
+                "pages": ["guias/introducao"]
               },
               {
                 "group": "Integração",
                 "pages": ["guias/webhooks", "guias/socket"]
+              },
+              {
+                "group": "Ferramentas de IA",
+                "pages": [
+                  "ai-tools/visao-geral",
+                  "ai-tools/claude-code",
+                  "ai-tools/claude",
+                  "ai-tools/cursor",
+                  "ai-tools/vscode",
+                  "ai-tools/codex"
+                ]
               }
             ]
           },
