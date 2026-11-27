@@ -30,7 +30,6 @@
           },
           {
             "tab": "API Reference",
-            "openapi": "/api-reference/openapi-v2.json",
             "groups": [
               {
                 "group": "Mensagens",
@@ -84,7 +83,6 @@
           },
           {
             "tab": "API Reference",
-            "openapi": "/api-reference/openapi.json",
             "groups": [
               {
                 "group": "Mensagens",
@@ -158,10 +156,5 @@
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
   },
-  "footer": {},
-  "banner": {
-    "content": "A API v1 está **descontinuada** e sai do ar em 31/12/2026. [Migre para a API v2](/guias/api-v2).",
-    "dismissible": true,
-    "type": "warning"
-  }
+  "footer": {}
 }

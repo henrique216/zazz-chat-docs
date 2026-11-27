@@ -13,7 +13,7 @@ Site de documentação da API pública do Zazz Chat, feito com [Mintlify](https:
 
 | Caminho | Conteúdo |
 |---------|----------|
-| `docs.json` | Navegação por `versions` (v2 padrão, v1 com tag `Deprecated`), banner, redirects |
+| `docs.json` | Navegação por `versions` (v2 padrão, v1 com tag `Deprecated`), redirects. Sem `openapi` nas abas: cada página aponta o próprio spec (com `openapi` na aba o Mintlify gera um grupo duplicado com todos os endpoints) |
 | `guias/` | Guias: `api-v2` (v2), `introducao` (v1 legada), `webhooks`, `socket` |
 | `api-reference/openapi-v2.json` | Spec da v2 e dos webhooks |
 | `api-reference/openapi.json` | Spec da v1 legada |
